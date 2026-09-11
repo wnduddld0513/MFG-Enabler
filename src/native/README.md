@@ -8,7 +8,7 @@
 - `nvapi_proxy.c`: NVAPI DLL 소스.
 - `build.ps1`: Windows x64 DLL 빌드 스크립트.
 - `tools/zig-0.15.2.zip`: Zig 0.15.2 Windows x64 공식 배포본(라이선스 포함).
-- `LICENSE`: 프록시 소스의 MIT 라이선스.
+- `LICENSE`: 프록시 소스의 GNU GPL version 3 라이선스.
 - `bin/nvapi64.dll`: 빌드 출력. 처음에는 기존 빌드 DLL을 보관하며 빌드할 때 재생성합니다.
 - `.cache/`: 압축 해제한 컴파일러. 없어도 동봉된 ZIP에서 복원합니다.
 

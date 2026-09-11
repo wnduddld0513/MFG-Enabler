@@ -85,4 +85,6 @@ The DLL output is `src/native/bin/nvapi64.dll`.
 - [FakeNvAPI](https://github.com/optiscaler/fakenvapi) inspired the bundled NVAPI identity proxy. The proxy is a separate implementation, not an upstream FakeNvAPI binary; see [NVAPI implementation details](docs/SPOOF5080.md).
 - [Zig](https://ziglang.org/) is used to compile the native proxy.
 
-MFG-Enabler is licensed under the [MIT License](LICENSE). Third-party components retain their respective licenses; see [upstream notices](docs/UPSTREAM-NOTICES.txt).
+MFG-Enabler is licensed under the [GNU General Public License version 3](LICENSE) (GPL-3.0-only), including its independent NVAPI proxy, to align with the GPLv3 source license declared by dlssg_for_sm86. Copyright (c) 2026 MFG Enabler contributors.
+
+Third-party components retain their respective licenses. NVIDIA runtime, model, graph, and kernel assets are not relicensed by this GPL declaration. See [upstream notices](docs/UPSTREAM-NOTICES.txt) and [licensing details](docs/LICENSING.md).

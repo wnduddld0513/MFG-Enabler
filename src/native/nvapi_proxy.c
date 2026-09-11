@@ -1,5 +1,6 @@
 /* MFG Enabler: a narrow NVAPI identity proxy, inspired by FakeNvAPI.
- * MIT, copyright (c) 2026 MFG Enabler contributors.
+ * SPDX-License-Identifier: GPL-3.0-only
+ * Copyright (c) 2026 MFG Enabler contributors.
  * No driver/Reflex/NGX capability emulation. See docs/SPOOF5080.md.
  */
 #define WIN32_LEAN_AND_MEAN

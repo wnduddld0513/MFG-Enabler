@@ -16,4 +16,4 @@ Installation and restore are recorded separately under the renderer directory's 
 
 References: [NVIDIA NVAPI API documentation](https://docs.nvidia.com/nvapi/group__gpu.html), [official interface identifiers](https://github.com/NVIDIA/nvapi/blob/main/nvapi_interface.h), [NVIDIA device list identifying RTX 5080 as 2C02](https://download.nvidia.com/XFree86/Linux-x86_64/570.133.07/README/supportedchips.html), [FakeNvAPI source](https://github.com/optiscaler/fakenvapi/blob/c39271ab990fab3b80ebac93a593b963cdac0f0d/src/fakenvapi.cpp).
 
-The manager and this independent native source are MIT licensed. No upstream binaries or NVIDIA SDK headers are distributed as part of the build.
+The manager and this independent native source are licensed under GNU GPL version 3 (GPL-3.0-only). No upstream binaries or NVIDIA SDK headers are distributed as part of the build.

@@ -1,6 +1,6 @@
 ﻿# MFG Enabler 1.3
 
-RTX 30 시리즈용 DLSSG Native 설치·복구 도구. Windows x64 데스크톱 앱이며, 게임마다 **MFG 활성화**와 선택 사항인 **RTX 5080 인식**을 각각 체크해 설치·해제합니다. 관리 프로그램의 소스는 MIT 라이선스로 공개·빌드할 수 있습니다.
+RTX 30 시리즈용 DLSSG Native 설치·복구 도구. Windows x64 데스크톱 앱이며, 게임마다 **MFG 활성화**와 선택 사항인 **RTX 5080 인식**을 각각 체크해 설치·해제합니다. 관리 프로그램의 소스는 GNU GPL version 3 라이선스로 공개·빌드할 수 있습니다.
 
 ## 실행
 
@@ -95,6 +95,6 @@ C# 부분은 Windows .NET Framework 컴파일러를 사용합니다. `build-nati
 
 NVIDIA App 11.0.9.251의 제공된 프로그램 폴더와 로컬 검색 캐시 구조를 확인했습니다. 이 도구는 NVIDIA가 이미 수행한 탐색 결과를 읽는 독립 C# 구현입니다. 비공개 네이티브 스캐너를 복사하거나 내부 RPC를 호출하지 않습니다. NVIDIA의 코드·이미지·로고·EXE·fingerprint DB는 배포물에 포함하지 않습니다. 캐시 형식은 NVIDIA 업데이트에 따라 달라질 수 있습니다. [연동 확인 사항](docs/NVIDIA-INTEGRATION.md)을 참고하세요.
 
-관리 프로그램만 MIT 라이선스입니다. upstream의 DLL·모델·커널은 별도 제3자 자료이며 MIT로 재라이선스하지 않습니다. SM86 DLL은 EXE에 포함하지 않고 사용자 실행 시 upstream에서 받습니다. 독립 구현한 5080 NVAPI 프록시는 소스와 함께 제공하고 EXE에 포함합니다. [upstream 고지](docs/UPSTREAM-NOTICES.txt)를 함께 제공합니다. upstream 런타임 자체를 소스로 재빌드하는 프로젝트는 아닙니다.
+관리 프로그램과 독립 NVAPI 프록시 소스는 GNU GPL version 3 라이선스입니다. upstream의 DLL·모델·커널은 별도 제3자 자료이며 이 프로젝트의 GPL로 재라이선스하지 않습니다. SM86 DLL은 EXE에 포함하지 않고 사용자 실행 시 upstream에서 받습니다. 독립 구현한 5080 NVAPI 프록시는 소스와 함께 제공하고 EXE에 포함합니다. [upstream 고지](docs/UPSTREAM-NOTICES.txt)를 함께 제공합니다. upstream 런타임 자체를 소스로 재빌드하는 프로젝트는 아닙니다.
 
 
