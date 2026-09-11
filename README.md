@@ -1,14 +1,15 @@
 # MFG-Enabler 1.0
 <img width="1940" height="1354" alt="ui2" src="https://github.com/user-attachments/assets/2f6db7c1-3b62-4e9a-b74f-a55a6a1746d2" />
 <img width="1940" height="1354" alt="ui1" src="https://github.com/user-attachments/assets/a85754a4-f826-4e03-8b8d-678f7e9ea007" />
+
 MFG-Enabler is a Windows tool for enabling Multi Frame Generation (MFG) on GeForce RTX 20, 30, and 40 series GPUs in supported games.
 
-
+# Screenshots
 Enable in-game MFG option (on RTX 4060 Laptop)
 <img width="2560" height="1440" alt="mfg" src="https://github.com/user-attachments/assets/944e0aee-69cd-46c5-8bee-70091ca007af" />
 
 
-2X FG (on RTX 4060 Laptop)
+4X MFG (on RTX 4060 Laptop)
 <img width="2560" height="1440" alt="4x" src="https://github.com/user-attachments/assets/a4b7a6f2-dda3-4361-bdb7-85bbae5ac025" />
 
 
@@ -16,7 +17,7 @@ Enable in-game MFG option (on RTX 4060 Laptop)
 <img width="2560" height="1440" alt="3x" src="https://github.com/user-attachments/assets/91939696-5f6c-4105-869a-c73e0ef24370" />
 
 
-4X MFG (on RTX 4060 Laptop)
+2X FG (on RTX 4060 Laptop)
 <img width="2560" height="1440" alt="2x" src="https://github.com/user-attachments/assets/6ee143f5-45ce-4ba4-9ff1-ae95644f85ee" />
 Tested on RTX 3070, RTX 4060 Laptop, Cyberpunk 2077
 
