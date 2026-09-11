@@ -1,6 +1,26 @@
 # MFG-Enabler 1.0
+<img width="1940" height="1354" alt="ui2" src="https://github.com/user-attachments/assets/2f6db7c1-3b62-4e9a-b74f-a55a6a1746d2" />
+<img width="1940" height="1354" alt="ui1" src="https://github.com/user-attachments/assets/a85754a4-f826-4e03-8b8d-678f7e9ea007" />
 
 MFG-Enabler is a Windows tool for enabling Multi Frame Generation (MFG) on GeForce RTX 20, 30, and 40 series GPUs in supported games.
+
+# Screenshots
+Enable in-game MFG option (on RTX 4060 Laptop)
+<img width="2560" height="1440" alt="mfg" src="https://github.com/user-attachments/assets/944e0aee-69cd-46c5-8bee-70091ca007af" />
+
+
+4X MFG (on RTX 4060 Laptop)
+<img width="2560" height="1440" alt="4x" src="https://github.com/user-attachments/assets/a4b7a6f2-dda3-4361-bdb7-85bbae5ac025" />
+
+
+3X MFG (on RTX 4060 Laptop)
+<img width="2560" height="1440" alt="3x" src="https://github.com/user-attachments/assets/91939696-5f6c-4105-869a-c73e0ef24370" />
+
+
+2X FG (on RTX 4060 Laptop)
+<img width="2560" height="1440" alt="2x" src="https://github.com/user-attachments/assets/6ee143f5-45ce-4ba4-9ff1-ae95644f85ee" />
+Tested on RTX 3070, RTX 4060 Laptop, Cyberpunk 2077
+
 
 It downloads and applies [dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_sm86), backs up replaced files, and restores them when you remove the mod. It also includes a custom NVAPI proxy inspired by [FakeNvAPI](https://github.com/optiscaler/fakenvapi), which reports an RTX 5080 identity for supported GPU checks to unlock in-game MFG options.
 
@@ -11,8 +31,7 @@ It downloads and applies [dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_
 - Find games through NVIDIA App detection data, or add a game executable manually.
 - Back up original files and verify file integrity during installation and restoration.
 - Optionally check for dlssg_for_sm86 updates. Automatic updates are off by default.
-- Switch between English and Korean in the app settings.
-- Check for MFG-Enabler releases at startup, choose Stable or Beta in Settings, and apply ZIP updates with an automatic restart.
+- Check for MFG-Enabler releases at startup, and apply updates with an automatic restart.
 
 MFG operation has been confirmed on RTX 20, 30, and 40 series GPUs. Compatibility depends on the game and how it loads the mod and queries the GPU; this does not imply support for every game.
 
