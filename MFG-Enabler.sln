@@ -1,0 +1,28 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.0.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WinUI", "WinUI", "{FB7EFC61-3055-BC71-2EFD-E7A11760CC7A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MFG-Enabler", "WinUI\MFG-Enabler.csproj", "{3A65C9DD-EFB6-4522-9CCA-FEFF4D9846F2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3A65C9DD-EFB6-4522-9CCA-FEFF4D9846F2}.Debug|x64.ActiveCfg = Debug|x64
+		{3A65C9DD-EFB6-4522-9CCA-FEFF4D9846F2}.Debug|x64.Build.0 = Debug|x64
+		{3A65C9DD-EFB6-4522-9CCA-FEFF4D9846F2}.Release|x64.ActiveCfg = Release|x64
+		{3A65C9DD-EFB6-4522-9CCA-FEFF4D9846F2}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3A65C9DD-EFB6-4522-9CCA-FEFF4D9846F2} = {FB7EFC61-3055-BC71-2EFD-E7A11760CC7A}
+	EndGlobalSection
+EndGlobal
+

@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>MfgEnabler</RootNamespace>
+    <AssemblyName>MFG-Enabler</AssemblyName>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <ApplicationIcon>Assets/MFG-Enabler.ico</ApplicationIcon>
+    <ApplicationManifest>../src/app.manifest</ApplicationManifest>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Version>1.0</Version>
+    <AppReleaseVersion Condition="'$(AppReleaseVersion)' == ''">$(Version)</AppReleaseVersion>
+    <InformationalVersion>$(AppReleaseVersion)</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+    <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
+    <NoWarn>$(NoWarn);SYSLIB0014;SYSLIB0021;SYSLIB0045</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Update="Assets/MFG-Enabler.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="Assets/MFG-Enabler.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260804001" />
+    <Compile Include="../src/Core.cs" Link="Core/Core.cs" />
+    <Compile Include="../src/Discovery.cs" Link="Core/Discovery.cs" />
+    <Compile Include="../src/Updates.cs" Link="Core/Updates.cs" />
+    <Compile Include="../src/AppUpdates.cs" Link="Core/AppUpdates.cs" />
+    <EmbeddedResource Include="../src/app-update.ps1" LogicalName="app-update.ps1" />
+    <EmbeddedResource Include="../src/payload.lock" LogicalName="payload.lock" />
+    <EmbeddedResource Include="../src/native/bin/nvapi64.dll" LogicalName="spoof5080.dll" />
+  </ItemGroup>
+  <Target Name="BuildNativeProxy" BeforeTargets="PrepareForBuild">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../build-native.ps1&quot;" />
+  </Target>
+</Project>
+
+

@@ -1,0 +1,18 @@
+<Project Sdk="WixToolset.Sdk/6.0.2">
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <Platform>x64</Platform>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <ProductVersion Condition="'$(ProductVersion)' == ''">1.0.0</ProductVersion>
+    <OutputName>MFG-Enabler-Setup-$(ProductVersion)</OutputName>
+    <OutputPath>output</OutputPath>
+    <IntermediateOutputPath>obj</IntermediateOutputPath>
+    <DefineConstants>ProductVersion=$(ProductVersion);PayloadDir=$(MSBuildProjectDirectory)\..\dist</DefineConstants>
+    <Cultures>en-US</Cultures>
+    <SuppressIces>ICE03;ICE61</SuppressIces>
+    <SuppressPdbOutput>true</SuppressPdbOutput>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="6.0.2" />
+  </ItemGroup>
+</Project>

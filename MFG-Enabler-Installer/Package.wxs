@@ -1,0 +1,109 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="MFG-Enabler"
+    Manufacturer="MFG-Enabler Project"
+    Version="$(var.ProductVersion)"
+    UpgradeCode="{49E2FF67-9EAC-4B7F-9231-211EE9025F15}"
+    Language="1033"
+    Codepage="1252"
+    Scope="perMachine"
+    InstallerVersion="500">
+
+    <SummaryInformation Description="MFG-Enabler Setup" Manufacturer="MFG-Enabler Project" />
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of MFG-Enabler is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="MFGEnabler.ico" SourceFile="$(var.PayloadDir)\Assets\MFG-Enabler.ico" />
+    <Property Id="ARPPRODUCTICON" Value="MFGEnabler.ico" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/wnduddld0513/MFG-Enabler" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/wnduddld0513/MFG-Enabler" />
+    <Property Id="CREATE_DESKTOP_SHORTCUT" Value="1" Secure="yes" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="MFGEnabler">
+        <Component Id="MainExecutable" Guid="*">
+          <File Id="MFGEnablerExe" Source="$(var.PayloadDir)\MFG-Enabler.exe" KeyPath="yes" Checksum="yes" />
+        </Component>
+        <Component Id="DesktopShortcut" Guid="*" Condition="CREATE_DESKTOP_SHORTCUT = &quot;1&quot;" Transitive="yes">
+          <Shortcut
+            Id="MFGEnablerDesktopShortcut"
+            Directory="DesktopFolder"
+            Name="MFG-Enabler"
+            Description="Launch MFG-Enabler"
+            Target="[INSTALLFOLDER]MFG-Enabler.exe"
+            WorkingDirectory="INSTALLFOLDER"
+            Icon="MFGEnabler.ico" />
+          <RegistryValue Root="HKCU" Key="Software\MFG-Enabler" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Feature Id="MainFeature" Title="MFG-Enabler" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="DesktopShortcut" />
+      <Files Include="$(var.PayloadDir)\**" Directory="INSTALLFOLDER">
+        <Exclude Files="$(var.PayloadDir)\MFG-Enabler.exe" />
+        <Exclude Files="$(var.PayloadDir)\**\*.pdb" />
+      </Files>
+    </Feature>
+
+    <UI Id="MFGEnablerInstallUI">
+      <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
+      <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
+      <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" />
+      <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+
+      <DialogRef Id="BrowseDlg" />
+      <DialogRef Id="DiskCostDlg" />
+      <DialogRef Id="ErrorDlg" />
+      <DialogRef Id="FatalError" />
+      <DialogRef Id="FilesInUse" />
+      <DialogRef Id="MsiRMFilesInUse" />
+      <DialogRef Id="PrepareDlg" />
+      <DialogRef Id="ProgressDlg" />
+      <DialogRef Id="ResumeDlg" />
+      <DialogRef Id="UserExit" />
+
+      <Dialog Id="DesktopShortcutDlg" Width="370" Height="270" Title="[ProductName] Setup" NoMinimize="yes">
+        <Control Id="Title" Type="Text" X="25" Y="20" Width="320" Height="30" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Bigger}Installation options" />
+        <Control Id="Description" Type="Text" X="25" Y="55" Width="320" Height="30" Transparent="yes" Text="Choose whether Setup should add a shortcut to the desktop." />
+        <Control Id="DesktopShortcutCheckBox" Type="CheckBox" X="25" Y="105" Width="300" Height="18" Property="CREATE_DESKTOP_SHORTCUT" CheckBoxValue="1" Text="Add a desktop shortcut" />
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)">
+          <Publish Event="NewDialog" Value="InstallDirDlg" />
+        </Control>
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)">
+          <Publish Event="NewDialog" Value="VerifyReadyDlg" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+      </Dialog>
+
+      <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Condition="Installed AND PATCH" />
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" />
+      <Publish Dialog="InstallDirDlg" Control="Next" Event="CheckTargetPath" Value="[WIXUI_INSTALLDIR]" Order="1" />
+      <Publish Dialog="InstallDirDlg" Control="Next" Event="SetTargetPath" Value="[WIXUI_INSTALLDIR]" Order="3" />
+      <Publish Dialog="InstallDirDlg" Control="Next" Event="NewDialog" Value="DesktopShortcutDlg" Order="4" />
+      <Publish Dialog="InstallDirDlg" Control="ChangeFolder" Property="_BrowseProperty" Value="[WIXUI_INSTALLDIR]" Order="1" />
+      <Publish Dialog="InstallDirDlg" Control="ChangeFolder" Event="SpawnDialog" Value="BrowseDlg" Order="2" />
+      <Publish Dialog="BrowseDlg" Control="OK" Event="CheckTargetPath" Value="[WIXUI_INSTALLDIR]" Order="1" />
+      <Publish Dialog="BrowseDlg" Control="OK" Event="SetTargetPath" Value="[_BrowseProperty]" Order="3" />
+      <Publish Dialog="BrowseDlg" Control="OK" Event="EndDialog" Value="Return" Order="4" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="DesktopShortcutDlg" Order="1" Condition="NOT Installed" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="2" Condition="Installed AND NOT PATCH" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2" Condition="Installed AND PATCH" />
+      <Publish Dialog="MaintenanceWelcomeDlg" Control="Next" Event="NewDialog" Value="MaintenanceTypeDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Event="NewDialog" Value="VerifyReadyDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="Back" Event="NewDialog" Value="MaintenanceWelcomeDlg" />
+
+      <Property Id="ARPNOMODIFY" Value="1" />
+    </UI>
+    <UIRef Id="WixUI_Common" />
+  </Package>
+</Wix>

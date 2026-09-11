@@ -1,0 +1,51 @@
+<Application x:Class="MfgEnabler.App"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ RequestedTheme="Dark">
+ <Application.Resources>
+  <ResourceDictionary>
+    <ResourceDictionary.MergedDictionaries>
+     <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+    </ResourceDictionary.MergedDictionaries>
+    <Color x:Key="SystemAccentColor">#76B900</Color>
+    <Color x:Key="SystemAccentColorLight1">#8ACB18</Color>
+    <Color x:Key="SystemAccentColorLight2">#A4D65E</Color>
+    <Color x:Key="SystemAccentColorLight3">#C6E69C</Color>
+    <Color x:Key="SystemAccentColorDark1">#639900</Color>
+    <Color x:Key="SystemAccentColorDark2">#4F7A00</Color>
+    <Color x:Key="SystemAccentColorDark3">#3D5F00</Color>
+    <SolidColorBrush x:Key="SystemControlHighlightAccentBrush" Color="#76B900"/>
+    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#76B900"/>
+    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#8ACB18"/>
+    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#639900"/>
+    <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush" Color="#8ACB18"/>
+    <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#76B900"/>
+    <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#8ACB18"/>
+    <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#639900"/>
+    <SolidColorBrush x:Key="ToggleSwitchFillOnDisabled" Color="#4F7A00"/>
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="#76B900"/>
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="#8ACB18"/>
+    <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="#639900"/>
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#2D2D2D"/>
+    <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#333333"/>
+    <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed" Color="#2D2D2D"/>
+    <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="ComboBoxItemSelectionIndicatorFill" Color="#76B900"/>
+    <SolidColorBrush x:Key="SystemControlHighlightListAccentLowBrush" Color="#263800"/>
+    <SolidColorBrush x:Key="SystemControlHighlightListAccentMediumBrush" Color="#76B900"/>
+   <Style x:Key="TextAction" TargetType="Button">
+    <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Foreground" Value="#EEEEEE"/><Setter Property="FontWeight" Value="SemiBold"/>
+    <Setter Property="Padding" Value="14,10"/><Setter Property="CornerRadius" Value="3"/>
+   </Style>
+    <Style TargetType="ToggleSwitch">
+     <Setter Property="MinWidth" Value="44"/><Setter Property="OnContent" Value=""/><Setter Property="OffContent" Value=""/>
+     <Setter Property="HorizontalAlignment" Value="Right"/><Setter Property="VerticalAlignment" Value="Center"/>
+     <Setter Property="Margin" Value="0,0,-12,0"/>
+    </Style>
+  </ResourceDictionary>
+ </Application.Resources>
+</Application>
