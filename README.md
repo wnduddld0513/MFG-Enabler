@@ -16,6 +16,15 @@ It downloads and applies [dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_
 
 MFG operation has been confirmed on RTX 20, 30, and 40 series GPUs. Compatibility depends on the game and how it loads the mod and queries the GPU; this does not imply support for every game.
 
+## Download
+
+Get the latest build from [GitHub Releases](https://github.com/wnduddld0513/MFG-Enabler/releases/latest):
+
+- **MSI installer**: download `MFG-Enabler-Setup-1.0.0.msi` and run Setup.
+- **Portable ZIP**: download `MFG-Enabler-Package-1.0.zip`, extract the entire archive, and launch `MFG-Enabler.exe`.
+
+Choose the MSI or portable ZIP under **Assets**. GitHub's automatically generated **Source code** archives do not contain a runnable application.
+
 ## Requirements
 
 - Windows 10 version 2004 (build 19041) or later, or Windows 11, x64.
