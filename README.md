@@ -1,6 +1,7 @@
 # MFG-Enabler 1.0
 
 MFG-Enabler is a Windows tool for enabling Multi Frame Generation (MFG) on GeForce RTX 20, 30, and 40 series GPUs in supported games.
+Tested on RTX 3070, RTX 4060 Laptop, Cyberpunk 2077
 
 It downloads and applies [dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_sm86), backs up replaced files, and restores them when you remove the mod. It also includes a custom NVAPI proxy inspired by [FakeNvAPI](https://github.com/optiscaler/fakenvapi), which reports an RTX 5080 identity for supported GPU checks to unlock in-game MFG options.
 
@@ -11,8 +12,7 @@ It downloads and applies [dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_
 - Find games through NVIDIA App detection data, or add a game executable manually.
 - Back up original files and verify file integrity during installation and restoration.
 - Optionally check for dlssg_for_sm86 updates. Automatic updates are off by default.
-- Switch between English and Korean in the app settings.
-- Check for MFG-Enabler releases at startup, choose Stable or Beta in Settings, and apply ZIP updates with an automatic restart.
+- Check for MFG-Enabler releases at startup, and apply updates with an automatic restart.
 
 MFG operation has been confirmed on RTX 20, 30, and 40 series GPUs. Compatibility depends on the game and how it loads the mod and queries the GPU; this does not imply support for every game.
 
