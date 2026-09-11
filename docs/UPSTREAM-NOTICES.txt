@@ -3,6 +3,14 @@ https://github.com/sdli1995/dlssg_for_sm86/blob/main/THIRD_PARTY_NOTICES.txt
 The text below describes that upstream project and its components.
 MFG-Enabler's license is GNU GPL version 3; see LICENSE.
 
+Runtime channel v310.9.1 uses SilyNoMeta/dlssg_for_sm86:
+https://github.com/SilyNoMeta/dlssg_for_sm86
+A fork of sdli1995/dlssg_for_sm86 (MIT license, plus LICENSE-MFGAdaUnlock.txt,
+LICENSE-RTX40MFG.txt and LICENSE-Streamline-headers.txt in that repository).
+MFG-Enabler downloads version.dll and dlssg_sm86.ini from its GitHub releases
+at runtime and verifies them against the release SHA256SUMS. Nothing from that
+project is bundled in this repository.
+
 Helper libraries used by this project
 
 Project source follows the dlssg-to-fsr3 repository's GPLv3 license

@@ -17,8 +17,9 @@ namespace MfgEnabler {
   [DataMember] public string Blob;
  }
  [DataContract] public class RuntimePackage {
-  [DataMember] public string Revision;
-  [DataMember] public string Version;
+   [DataMember] public string Revision;
+   [DataMember] public string Version;
+   [DataMember] public string Channel;
   [DataMember] public List<PackageFile> Files;
  }
  [DataContract] public class AppSettings {
@@ -41,7 +42,9 @@ namespace MfgEnabler {
   public static void Validate(RuntimePackage p) {
    if(p==null||!HashLike(p.Revision,40)||p.Version==null||!Regex.IsMatch(p.Version,"\\A[0-9]+\\.[0-9]+\\.[0-9]+(?:\\.[0-9]+)?\\z")||p.Files==null||p.Files.Count!=6) throw new IOException("업데이트 패키지 기록이 유효하지 않습니다.");
    var names=Payload.Proxies.Concat(new[]{"dlssg_sm86.ini"}).ToArray();
-   if(p.Files.Any(f=>f==null)||p.Files.Select(f=>f.Name).Distinct().Count()!=6||p.Files.Any(f=>!names.Contains(f.Name)||f.Path!=RemotePath(f.Name)||!HashLike(f.Hash,64)||!HashLike(f.Blob,40))) throw new IOException("업데이트 파일 목록 또는 해시가 잘못되었습니다.");
+    if(p.Channel=="v310.9.1") {
+     if(p.Files.Any(f=>f==null)||p.Files.Select(f=>f.Name).Distinct().Count()!=6||p.Files.Any(f=>!names.Contains(f.Name)||f.Path==null||!f.Path.StartsWith("https://github.com/SilyNoMeta/dlssg_for_sm86/releases/download/",StringComparison.Ordinal)||!HashLike(f.Hash,64)||(f.Blob!=null&&f.Blob!=""&&!HashLike(f.Blob,40)))) throw new IOException("업데이트 파일 목록 또는 해시가 잘못되었습니다.");
+    } else if(p.Files.Any(f=>f==null)||p.Files.Select(f=>f.Name).Distinct().Count()!=6||p.Files.Any(f=>!names.Contains(f.Name)||f.Path!=RemotePath(f.Name)||!HashLike(f.Hash,64)||!HashLike(f.Blob,40))) throw new IOException("업데이트 파일 목록 또는 해시가 잘못되었습니다.");
   }
   public static RuntimePackage Current() {
    if(!File.Exists(ActiveFile)) return Payload.Baseline();
@@ -71,13 +74,14 @@ namespace MfgEnabler {
    Validate(package);var spec=package.Files.Single(f=>f.Name==name);string directory=cacheDirectory??DirectoryFor(package),target=System.IO.Path.Combine(directory,name);Disk.Safe(directory);
    if(Disk.Hash(target)==spec.Hash)return;
     progress("dlssg_for_sm86 "+package.Version+" · "+name+" 다운로드 중…");
-   byte[] bytes=Download("https://raw.githubusercontent.com/sdli1995/dlssg_for_sm86/"+package.Revision+"/"+spec.Path,128*1024*1024);
-   if(Disk.HashBytes(bytes)!=spec.Hash||GitBlob(bytes)!=spec.Blob)throw new IOException("다운로드 무결성 확인 실패: "+name);
+    byte[] bytes=(package.Channel=="v310.9.1")?Download(spec.Path,128*1024*1024):Download("https://raw.githubusercontent.com/sdli1995/dlssg_for_sm86/"+package.Revision+"/"+spec.Path,128*1024*1024);
+    if(Disk.HashBytes(bytes)!=spec.Hash||(package.Channel!="v310.9.1"&&GitBlob(bytes)!=spec.Blob))throw new IOException("다운로드 무결성 확인 실패: "+name);
    Directory.CreateDirectory(directory);Disk.Write(target,bytes);
   }
 
-  static RuntimePackage FetchLatest(RuntimePackage current,Action<string> progress) {
-   const string api="https://api.github.com/repos/sdli1995/dlssg_for_sm86/";
+   public static RuntimePackage FetchLatest(RuntimePackage current,string channel,Action<string> progress) {
+    if(channel=="v310.9.1")return FetchSily(current,progress);
+    const string api="https://api.github.com/repos/sdli1995/dlssg_for_sm86/";
        progress("dlssg_for_sm86 최신 버전 확인 중…");var head=Json(api+"commits/main");string revision=Get(head,"sha") as string;
    if(!HashLike(revision,40))throw new IOException("GitHub 커밋 정보 오류");
    if(revision==current.Revision)return current;
@@ -122,9 +126,116 @@ namespace MfgEnabler {
    Validate(next);Disk.Save(System.IO.Path.Combine(staging,"package.json"),next);Disk.Save(ActiveFile,next);return next;
   }
 
-  public static UpdateResult CheckAndApply(IEnumerable<Game> known,Action<string> progress) {
-   var result=new UpdateResult();RuntimePackage selected=Current();bool checkFailed=false;
-   try {selected=FetchLatest(selected,progress);}catch(Exception e){checkFailed=true;result.Details.Add("업데이트 확인 실패 · 기존 버전 유지: "+e.Message);}
+   static bool VersionLike(string v) {
+    if(String.IsNullOrEmpty(v))return false;
+    var parts=v.Split('.');
+    if(parts.Length!=3&&parts.Length!=4)return false;
+    foreach(var p in parts){if(p.Length==0||p.Length>5)return false;foreach(var c in p)if(c<'0'||c>'9')return false;}
+    return true;
+   }
+   static RuntimePackage FetchSily(RuntimePackage current,Action<string> progress) {
+    progress("v310.9.1 최신 버전 확인 중…");
+    var raw=Download("https://api.github.com/repos/SilyNoMeta/dlssg_for_sm86/releases",8*1024*1024);
+    var releases=new JavaScriptSerializer{MaxJsonLength=16*1024*1024}.DeserializeObject(Encoding.UTF8.GetString(raw)) as object[];
+    if(releases==null)throw new IOException("GitHub 파일 목록 오류");
+    Dictionary<string,object> stable=null,any=null;DateTime tS=DateTime.MinValue,tA=DateTime.MinValue;
+    foreach(var r in releases) {
+     var row=r as Dictionary<string,object>;if(row==null)continue;
+     if(Get(row,"draft") is bool dd&&dd)continue;
+     if(!DateTime.TryParse(Get(row,"published_at") as string,out var pub))continue;
+     if(pub>tA){tA=pub;any=row;}
+     if(!(Get(row,"prerelease") is bool pp&&pp)&&pub>tS){tS=pub;stable=row;}
+    }
+    var pick=stable??any;
+    if(pick==null)throw new IOException("GitHub 파일 목록 오류");
+    string tag=Get(pick,"tag_name") as string;
+    string commitish=Get(pick,"target_commitish") as string;
+    if(!HashLike(commitish,40))throw new IOException("GitHub 커밋 정보 오류");
+    string version=(tag!=null&&tag.StartsWith("v")?tag.Substring(1):tag??"").Replace("-",".");
+    if(!VersionLike(version))throw new IOException("새 dlssg_for_sm86 버전 형식을 인식하지 못했습니다. 현재 버전을 유지합니다.");
+    if(commitish==current.Revision)return current;
+    if(new Version(version)<new Version(current.Version))throw new IOException("이전 버전으로 자동 변경하지 않습니다.");
+    string dllUrl=null,dllHash=null,iniUrl=null,iniHash=null;
+    foreach(var a in (Get(pick,"assets") as object[])??new object[0]) {
+     var asset=a as Dictionary<string,object>;if(asset==null)continue;
+     string n=Get(asset,"name") as string,u=Get(asset,"browser_download_url") as string,d=Get(asset,"digest") as string;
+     string h=(d!=null&&d.StartsWith("sha256:"))?d.Substring(7):null;
+     if(n=="version.dll"){dllUrl=u;dllHash=h;}else if(n=="dlssg_sm86.ini"){iniUrl=u;iniHash=h;}
+    }
+    if(String.IsNullOrEmpty(dllUrl)||!HashLike(dllHash,64)||String.IsNullOrEmpty(iniUrl)||!HashLike(iniHash,64))throw new IOException("업데이트 설치 형식이 달라졌습니다: version.dll");
+    var next=new RuntimePackage{Revision=commitish,Version=version,Channel="v310.9.1",Files=new List<PackageFile>()};
+    foreach(string name in Payload.Proxies)next.Files.Add(new PackageFile{Name=name,Path=dllUrl,Hash=dllHash,Blob=""});
+    next.Files.Add(new PackageFile{Name="dlssg_sm86.ini",Path=iniUrl,Hash=iniHash,Blob=""});
+    string staging=DirectoryFor(next);Disk.Safe(staging);Directory.CreateDirectory(staging);
+    foreach(var file in next.Files) {
+     Ensure(next,file.Name,progress,staging);
+     string target=System.IO.Path.Combine(staging,file.Name);
+     if(file.Name.EndsWith(".dll")&&!Discovery.IsX64(target))throw new IOException("x64 DLL 형식이 아닙니다: "+file.Name);
+    }
+    Validate(next);Disk.Save(System.IO.Path.Combine(staging,"package.json"),next);Disk.Save(ActiveFile,next);return next;
+   }
+   public static RuntimePackage BaselineFor(string channel) {
+    if(channel=="v310.9.1")return new RuntimePackage{Revision="",Version="0.0.0",Channel="v310.9.1",Files=Payload.Proxies.Concat(new[]{"dlssg_sm86.ini"}).Select(n=>new PackageFile{Name=n}).ToList()};
+    return Payload.Baseline();
+   }
+   public static void BakeV310Ini(Dictionary<string,string> values,Action<string> progress) {
+    RuntimePackage package=null;
+    try { package=Current(); } catch { package=null; }
+    if(package==null||(package.Channel??"dlssg_for_sm86")!="v310.9.1")package=FetchLatest(BaselineFor("v310.9.1"),"v310.9.1",progress);
+    string iniUrl=package.Files.Single(f=>f.Name=="dlssg_sm86.ini").Path;
+    string sumsUrl=iniUrl.Substring(0,iniUrl.LastIndexOf('/')+1)+"SHA256SUMS.txt";
+    string expect=null;
+    var toks=Encoding.UTF8.GetString(Download(sumsUrl,1024*1024)).Split((char[])null,StringSplitOptions.RemoveEmptyEntries);
+    for(int i=0;i+1<toks.Length;i+=2)if(toks[i+1]=="dlssg_sm86.ini")expect=toks[i];
+    if(!HashLike(expect,64))throw new IOException("다운로드 무결성 확인 실패: dlssg_sm86.ini");
+    byte[] stock=Download(iniUrl,1024*1024);
+    if(Disk.HashBytes(stock)!=expect)throw new IOException("다운로드 무결성 확인 실패: dlssg_sm86.ini");
+    string text=Encoding.UTF8.GetString(stock);
+    if(values!=null&&values.Count>0)text=ApplyIniValues(text,values);
+    byte[] baked=Encoding.UTF8.GetBytes(text);
+    string dir=DirectoryFor(package);Directory.CreateDirectory(dir);
+    Disk.Write(System.IO.Path.Combine(dir,"dlssg_sm86.ini"),baked);
+    package.Files.Single(f=>f.Name=="dlssg_sm86.ini").Hash=Disk.HashBytes(baked);
+    package.Files.Single(f=>f.Name=="dlssg_sm86.ini").Blob="";
+    Disk.Save(ActiveFile,package);
+   }
+   public static string ApplyIniValues(string stock,Dictionary<string,string> values) {
+    var order=new[]{
+     new[]{"FrameGeneration","MaxMultiplier"},new[]{"FrameGeneration","ForceMultiplier"},
+     new[]{"FrameGeneration","DynamicMFG"},new[]{"FrameGeneration","DynamicTargetFPS"},
+     new[]{"Optimizations","HardwareBilinear"},new[]{"Optimizations","Conv13SharedInput"},
+     new[]{"Optimizations","Conv0SharedInput"},new[]{"Optimizations","ResidualVectorLoads"}};
+    var lines=new List<string>();
+    using(var reader=new System.IO.StringReader(stock)){string line;while((line=reader.ReadLine())!=null)lines.Add(line);}
+    var done=new HashSet<string>();
+    string section="";
+    for(int i=0;i<lines.Count;i++) {
+     string t=lines[i].Trim();
+     if(t.Length>2&&t[0]=='['&&t[t.Length-1]==']'){section=t.Substring(1,t.Length-2).Trim();continue;}
+     if(t.Length==0||t[0]==';'||t[0]=='#')continue;
+     int eq=t.IndexOf('=');
+     if(eq<0)continue;
+     string key=t.Substring(0,eq).Trim();
+     foreach(var pair in order) {
+      if(done.Contains(pair[1])||!section.Equals(pair[0],StringComparison.OrdinalIgnoreCase)||!key.Equals(pair[1],StringComparison.OrdinalIgnoreCase))continue;
+      string v;if(values!=null&&values.TryGetValue(pair[1],out v)){lines[i]=pair[1]+"="+v;done.Add(pair[1]);}
+      break;
+     }
+    }
+    foreach(var pair in order) {
+     if(done.Contains(pair[1]))continue;
+     string v;if(values==null||!values.TryGetValue(pair[1],out v))continue;
+     int at=-1;
+     for(int i=0;i<lines.Count;i++){string t=lines[i].Trim();if(t.Length>2&&t[0]=='['&&t[t.Length-1]==']'&&t.Substring(1,t.Length-2).Trim().Equals(pair[0],StringComparison.OrdinalIgnoreCase)){at=i;break;}}
+     if(at<0){if(lines.Count>0&&lines[lines.Count-1].Trim().Length!=0)lines.Add("");lines.Add("["+pair[0]+"]");at=lines.Count-1;}
+     lines.Insert(at+1,pair[1]+"="+v);done.Add(pair[1]);
+    }
+    return string.Join(Environment.NewLine,lines);
+   }
+   public static UpdateResult CheckAndApply(IEnumerable<Game> known,Action<string> progress,string channel) {
+    var result=new UpdateResult();RuntimePackage selected=Current();bool checkFailed=false;
+    if((selected.Channel??"dlssg_for_sm86")!=channel)selected=BaselineFor(channel);
+    try {selected=FetchLatest(selected,channel,progress);}catch(Exception e){checkFailed=true;result.Details.Add("업데이트 확인 실패 · 기존 버전 유지: "+e.Message);}
    int applied=0,skipped=0;
    foreach(var game in known.Where(g=>g!=null&&!String.IsNullOrEmpty(g.Exe)).GroupBy(g=>System.IO.Path.GetDirectoryName(g.Exe),StringComparer.OrdinalIgnoreCase).Select(g=>g.First())) {
     try {

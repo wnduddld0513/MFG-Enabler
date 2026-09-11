@@ -3,7 +3,7 @@
     <OutputType>Package</OutputType>
     <Platform>x64</Platform>
     <InstallerPlatform>x64</InstallerPlatform>
-    <ProductVersion Condition="'$(ProductVersion)' == ''">1.0.0</ProductVersion>
+    <ProductVersion Condition="'$(ProductVersion)' == ''">1.1.0</ProductVersion>
     <OutputName>MFG-Enabler-Setup-$(ProductVersion)</OutputName>
     <OutputPath>output</OutputPath>
     <IntermediateOutputPath>obj</IntermediateOutputPath>

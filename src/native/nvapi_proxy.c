@@ -43,18 +43,18 @@ static void *original(uint32_t id) {
     return real_query ? real_query(id) : NULL;
 }
 
-static int is_rtx30(void *gpu) {
+static int is_nvidia(void *gpu) {
     NameFn get_name = (NameFn)original(ID_NAME);
     char name[64] = {0};
     return get_name && get_name(gpu, name) == 0 &&
-           strncmp(name, "NVIDIA GeForce RTX 30", sizeof("NVIDIA GeForce RTX 30")-1) == 0;
+           strncmp(name, "NVIDIA", sizeof("NVIDIA")-1) == 0;
 }
 
 static int __cdecl spoof_name(void *gpu, char *name) {
     NameFn fn = (NameFn)original(ID_NAME);
     if (!fn) return -3;
     int status = fn(gpu, name);
-    if (status == 0 && name && strncmp(name, "NVIDIA GeForce RTX 30", sizeof("NVIDIA GeForce RTX 30")-1) == 0)
+    if (status == 0 && name && strncmp(name, "NVIDIA", sizeof("NVIDIA")-1) == 0)
         memcpy(name, "NVIDIA GeForce RTX 5080", sizeof("NVIDIA GeForce RTX 5080"));
     return status;
 }
@@ -63,7 +63,7 @@ static int __cdecl spoof_pci(void *gpu, uint32_t *device, uint32_t *subsystem, u
     PciFn fn = (PciFn)original(ID_PCI);
     if (!fn) return -3;
     int status = fn(gpu, device, subsystem, revision, external);
-    if (status == 0 && is_rtx30(gpu)) {
+    if (status == 0 && is_nvidia(gpu)) {
         if (device) *device = 0x2c0210deu;
         if (external) *external = 0x2c02u;
         /* Preserve the real board/subsystem and revision information. */
@@ -75,7 +75,7 @@ static int __cdecl spoof_arch(void *gpu, ArchInfo *info) {
     ArchFn fn = (ArchFn)original(ID_ARCH);
     if (!fn) return -3;
     int status = fn(gpu, info);
-    if (status == 0 && info && (info->version == 0x10010u || info->version == 0x20010u) && is_rtx30(gpu)) {
+    if (status == 0 && info && (info->version == 0x10010u || info->version == 0x20010u) && is_nvidia(gpu)) {
         info->architecture = 0x1b0u; /* Blackwell GB200 family */
         info->implementation = 3u;  /* GB203 */
         info->revision = 0xffffffffu;

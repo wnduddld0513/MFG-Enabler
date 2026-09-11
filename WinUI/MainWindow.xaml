@@ -52,7 +52,28 @@
          <StackPanel Spacing="10" Margin="16,18"><TextBlock x:Name="ExeLabel" Foreground="#BBBBBB"/><ComboBox x:Name="ExeCombo" HorizontalAlignment="Stretch" SelectionChanged="ExeChanged"/></StackPanel>
          <Border BorderBrush="#2B2B2B" BorderThickness="0,1,0,1" Padding="16,16"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="ProxyLabel" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="ProxyCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid></Border>
          <Border BorderBrush="#2B2B2B" BorderThickness="0,0,0,1" Padding="16,20"><Grid ColumnSpacing="18" HorizontalAlignment="Stretch"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Spacing="7"><TextBlock x:Name="MfgLabel" FontSize="15"/><TextBlock x:Name="MfgDescription" TextWrapping="Wrap" Foreground="#AAAAAA" FontSize="12"/></StackPanel><ToggleSwitch x:Name="MfgSwitch" Grid.Column="1" MinWidth="44" Width="72" OnContent="" OffContent="" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-12,0" Toggled="MfgToggled"/></Grid></Border>
-         <Border BorderBrush="#2B2B2B" BorderThickness="0,0,0,1" Padding="16,20"><Grid ColumnSpacing="18" HorizontalAlignment="Stretch"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Spacing="7"><TextBlock x:Name="SpoofLabel" FontSize="15"/><TextBlock x:Name="SpoofDescription" TextWrapping="Wrap" Foreground="#AAAAAA" FontSize="12"/></StackPanel><ToggleSwitch x:Name="SpoofSwitch" Grid.Column="1" MinWidth="44" Width="72" OnContent="" OffContent="" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-12,0" Toggled="SpoofToggled"/></Grid></Border>
+         <TextBlock x:Name="V310IniTitle" FontSize="17" FontWeight="SemiBold" Margin="0,28,0,8"/>
+         <Border x:Name="V310IniSection" BorderBrush="#303030" BorderThickness="0,0,0,1" Padding="16,20" Visibility="Collapsed">
+          <StackPanel Spacing="0">
+           <Grid Margin="0,0,0,20"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="V310MaxLabel" VerticalAlignment="Center"/><ComboBox x:Name="V310MaxCombo" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="V310ComboChanged"><ComboBoxItem Content="2"/><ComboBoxItem Content="3"/><ComboBoxItem Content="4"/><ComboBoxItem Content="5"/><ComboBoxItem Content="6"/></ComboBox></Grid>
+           <Grid Margin="0,0,0,20"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="V310ForceLabel" VerticalAlignment="Center"/><ComboBox x:Name="V310ForceCombo" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="V310ComboChanged"><ComboBoxItem Content="0"/><ComboBoxItem Content="1"/><ComboBoxItem Content="2"/><ComboBoxItem Content="3"/><ComboBoxItem Content="4"/><ComboBoxItem Content="5"/><ComboBoxItem Content="6"/></ComboBox></Grid>
+           <Grid Margin="0,0,0,20" ColumnSpacing="24" HorizontalAlignment="Stretch"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="V310DynamicLabel" VerticalAlignment="Center"/><ToggleSwitch x:Name="V310DynamicSwitch" Grid.Column="1" MinWidth="44" Width="72" OnContent="" OffContent="" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-12,0" Toggled="V310ToggleChanged"/></Grid>
+           <Grid Margin="0,0,0,20"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="V310FpsLabel" VerticalAlignment="Center"/><NumberBox x:Name="V310FpsBox" Grid.Column="1" HorizontalAlignment="Stretch" Minimum="0" Maximum="1000" ValueChanged="V310FpsChanged"/></Grid>
+           <Expander x:Name="V310OptsExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Margin="0,0,0,20">
+            <Expander.Header><TextBlock x:Name="V310OptsHeader"/></Expander.Header>
+            <Expander.Content>
+             <StackPanel Spacing="0">
+              <Grid Margin="0,0,0,20" ColumnSpacing="24" HorizontalAlignment="Stretch"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"><TextBlock x:Name="V310HwLabel" VerticalAlignment="Center"/><FontIcon Glyph="&#xE946;" FontSize="12" Foreground="#888888" VerticalAlignment="Center"><ToolTipService.ToolTip><TextBlock x:Name="V310HwTip" TextWrapping="Wrap" MaxWidth="280"></TextBlock></ToolTipService.ToolTip></FontIcon></StackPanel><ToggleSwitch x:Name="V310HwSwitch" Grid.Column="1" MinWidth="44" Width="72" OnContent="" OffContent="" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-12,0" Toggled="V310ToggleChanged"/></Grid>
+              <Grid Margin="0,0,0,20" ColumnSpacing="24" HorizontalAlignment="Stretch"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"><TextBlock x:Name="V310C13Label" VerticalAlignment="Center"/><FontIcon Glyph="&#xE946;" FontSize="12" Foreground="#888888" VerticalAlignment="Center"><ToolTipService.ToolTip><TextBlock x:Name="V310C13Tip" TextWrapping="Wrap" MaxWidth="280"></TextBlock></ToolTipService.ToolTip></FontIcon></StackPanel><ToggleSwitch x:Name="V310C13Switch" Grid.Column="1" MinWidth="44" Width="72" OnContent="" OffContent="" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-12,0" Toggled="V310ToggleChanged"/></Grid>
+              <Grid Margin="0,0,0,20" ColumnSpacing="24" HorizontalAlignment="Stretch"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"><TextBlock x:Name="V310C0Label" VerticalAlignment="Center"/><FontIcon Glyph="&#xE946;" FontSize="12" Foreground="#888888" VerticalAlignment="Center"><ToolTipService.ToolTip><TextBlock x:Name="V310C0Tip" TextWrapping="Wrap" MaxWidth="280"></TextBlock></ToolTipService.ToolTip></FontIcon></StackPanel><ToggleSwitch x:Name="V310C0Switch" Grid.Column="1" MinWidth="44" Width="72" OnContent="" OffContent="" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-12,0" Toggled="V310ToggleChanged"/></Grid>
+              <Grid Margin="0,0,0,20" ColumnSpacing="24" HorizontalAlignment="Stretch"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"><TextBlock x:Name="V310ResLabel" VerticalAlignment="Center"/><FontIcon Glyph="&#xE946;" FontSize="12" Foreground="#888888" VerticalAlignment="Center"><ToolTipService.ToolTip><TextBlock x:Name="V310ResTip" TextWrapping="Wrap" MaxWidth="280"></TextBlock></ToolTipService.ToolTip></FontIcon></StackPanel><ToggleSwitch x:Name="V310ResSwitch" Grid.Column="1" MinWidth="44" Width="72" OnContent="" OffContent="" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-12,0" Toggled="V310ToggleChanged"/></Grid>
+             </StackPanel>
+            </Expander.Content>
+           </Expander>
+           <TextBlock x:Name="V310Note" Foreground="#AAAAAA" TextWrapping="Wrap" Margin="0,4,0,12"/>
+           <Button x:Name="V310DefaultsButton" Style="{StaticResource TextAction}" Click="V310DefaultsClick" HorizontalAlignment="Left"/>
+          </StackPanel>
+         </Border>
          <TextBlock x:Name="StateText" Margin="16,20" TextWrapping="Wrap" Foreground="#B8B8B8"/>
          <StackPanel Orientation="Horizontal" Spacing="8"><Button x:Name="FolderButton" Style="{StaticResource TextAction}" Click="FolderClick"/><Button x:Name="DetailsButton" Style="{StaticResource TextAction}" Click="DetailsClick"/></StackPanel>
         </StackPanel>
@@ -63,6 +84,7 @@
       <StackPanel Margin="0,24,0,0">
        <TextBlock x:Name="GeneralTitle" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,8"/>
        <Border BorderBrush="#303030" BorderThickness="0,0,0,1" Padding="16,20"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="LanguageLabel" VerticalAlignment="Center"/><ComboBox x:Name="LanguageCombo" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="LanguageChanged"><ComboBoxItem Content="English" Tag="en"/><ComboBoxItem Content="한국어" Tag="ko"/></ComboBox></Grid></Border>
+       <Border BorderBrush="#303030" BorderThickness="0,0,0,1" Padding="16,20"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="RuntimeChannelLabel" VerticalAlignment="Center"/><ComboBox x:Name="RuntimeChannelCombo" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="RuntimeChannelChanged"><ComboBoxItem Content="DLSSG 310.9.1 - SilyNoMeta"/><ComboBoxItem Content="dlssg_for_sm86 - sdli1995"/></ComboBox></Grid></Border>
        <TextBlock x:Name="UpdatesTitle" FontSize="17" FontWeight="SemiBold" Margin="0,28,0,8"/>
        <Border BorderBrush="#303030" BorderThickness="0,0,0,1" Padding="16,20">
         <StackPanel Spacing="12">
@@ -75,8 +97,8 @@
         </StackPanel>
        </Border>
        <Border BorderBrush="#303030" BorderThickness="0,0,0,1" Padding="16,20"><Grid ColumnSpacing="24" HorizontalAlignment="Stretch"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><StackPanel Spacing="8"><TextBlock x:Name="AutoLabel"/><TextBlock x:Name="AutoDescription" Foreground="#AAAAAA" TextWrapping="Wrap"/></StackPanel><ToggleSwitch x:Name="AutoSwitch" Grid.Column="1" MinWidth="44" Width="72" OnContent="" OffContent="" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-12,0" Toggled="AutoToggled"/></Grid></Border>
-       <Button x:Name="UpdateDetailsButton" Style="{StaticResource TextAction}" Click="UpdateDetailsClick" Margin="2,10"/>
-       <TextBlock x:Name="AboutTitle" FontSize="17" FontWeight="SemiBold" Margin="0,28,0,12"/>
+        <Button x:Name="UpdateDetailsButton" Style="{StaticResource TextAction}" Click="UpdateDetailsClick" Margin="2,10"/>
+        <TextBlock x:Name="AboutTitle" FontSize="17" FontWeight="SemiBold" Margin="0,28,0,12"/>
         <TextBlock x:Name="AppVersionText" Margin="16,0,0,8"/>
        <TextBlock x:Name="AboutDescription" Foreground="#AAAAAA" TextWrapping="Wrap" Margin="16,0,16,20"/>
       </StackPanel>
@@ -84,6 +106,7 @@
     </Grid>
     </Grid>
    </Grid>
+  <Border x:Name="LoadingOverlay" Grid.Row="1" Background="#E6191919" Visibility="Collapsed"><StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16"><ProgressRing IsActive="True" Width="48" Height="48"/><TextBlock x:Name="LoadingText" HorizontalAlignment="Center" Foreground="#AAAAAA"/></StackPanel></Border>
   </Grid>
 </Window>
 

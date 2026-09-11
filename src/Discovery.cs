@@ -29,7 +29,7 @@ namespace MfgEnabler {
   public DateTime UpdatedUtc;
   public int Detected;
   public int Excluded;
-  public string Summary { get { return "NVIDIA App 감지 "+Detected+"개 · FG 구성 확인 "+Games.Count+"개 · 제외 "+Excluded+"개"; } }
+   public string Summary { get { return "NVIDIA App 감지 "+Detected+"개 · FG 구성 확인 "+Games.Count(g=>g.CanEnable)+"개 · 제외 "+Excluded+"개"; } }
  }
  // Independent reader of NVIDIA's installed-app output, not a launcher scanner.
  public static class Discovery {
@@ -64,17 +64,26 @@ namespace MfgEnabler {
     string name=Str(app,"DisplayName")??"이름 없는 항목";
     try {
      string reason; var game=ReadGame(row,app,profiles,result.StorageFile,out reason);
-     if(game==null) { result.Excluded++; result.Notes.Add(name+": "+reason); continue; }
+      if(game==null) { result.Excluded++; result.Notes.Add(name+": "+reason); continue; }
      string key=game.Exe??game.Root;
      if(!seen.Add(key)) { result.Excluded++; result.Notes.Add(name+": 중복 실행 경로"); continue; }
      result.Games.Add(game);
     } catch(Exception e) {
      if(!(e is IOException || e is UnauthorizedAccessException || e is ArgumentException || e is System.Security.SecurityException)) throw;
-     result.Excluded++; result.Notes.Add(name+": "+e.Message);
+      result.Excluded++; result.Notes.Add(name+": "+e.Message); result.Games.Add(LockedGame(row,app,name,e.Message,result.StorageFile));
     }
    }
-   result.Games=result.Games.OrderBy(g=>g.Name).ToList(); return result;
-  }
+    result.Games=result.Games.OrderBy(g=>g.Name).ToList(); return result;
+   }
+   static Game LockedGame(Dictionary<string,object> row,Dictionary<string,object> app,string name,string reason,string storage) {
+    string root=null,id=null;
+    try {
+     string r=app!=null?Str(app,"InstallDirectory"):null;
+     if(!String.IsNullOrWhiteSpace(r)&&Path.IsPathRooted(r)) root=Path.GetFullPath(r).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar);
+     if(row!=null) id=Id(Field(row,"LocalId"));
+    } catch { root=null; }
+    return new Game { Name=name,Root=root,Source="NVIDIA App 감지 · 적용 제외",CanEnable=false,NvidiaId=id,StorageFile=storage,Exe=null,Executables=new List<string>(),Evidence=reason };
+   }
   static string FindFingerprint(string storage) {
    string local=Path.Combine(Path.GetDirectoryName(storage),"ApplicationOntology","data","fingerprint.db");
    if(File.Exists(local)) return local;
@@ -106,34 +115,35 @@ namespace MfgEnabler {
    string value=(string)p.Element("Disable_FG_Override");
    if(value==null || value=="0") return false; if(value=="1") return true; return null;
   }
-  static Game ReadGame(Dictionary<string,object> row,Dictionary<string,object> app,List<XElement> profiles,string storage,out string reason) {
-   reason="불완전한 NVIDIA 검색 항목"; if(app==null) return null;
-   if(Flag(app,"IsCreativeApplication")==true) { reason="게임 외 크리에이티브 앱"; return null; }
-   if(Flag(app,"IsFingerprintDetected")!=true) { reason="NVIDIA fingerprint 미확인 (수동 등록만 된 항목 포함)"; return null; }
-   var profile=Profile(app,profiles); bool? denied=Flag(app,"Disable_FG_Override"), profileDenied=ProfileFg(profile);
-   if(denied==true || profileDenied==true) { reason="NVIDIA FG override 차단 프로필"; return null; }
-   if(denied!=false && profileDenied!=false) { reason="NVIDIA FG 프로필 정보 없음"; return null; }
-   string root=Str(app,"InstallDirectory");
-   if(String.IsNullOrWhiteSpace(root)||!Path.IsPathRooted(root)||!Directory.Exists(root)) { reason="설치 경로 없음 / 제거된 게임"; return null; }
-   root=Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar);
-   if(root.Length<=3) { reason="게임 설치 폴더로 볼 수 없는 드라이브 루트"; return null; }
-   Disk.Safe(root);
-   string driver=Resolve(root,Str(app,"DriverProfile"));
-   if(driver==null && profile!=null) driver=Resolve(root,(string)profile.Element("DriverProfile"));
-   var paths=new List<string>(); if(driver!=null) paths.Add(driver);
-   foreach(string value in Strings(Field(app,"DetectedFiles")).Concat(Strings(Field(app,"ImageFiles")))) {
-    string exe=Resolve(root,value); if(exe!=null && !paths.Contains(exe,StringComparer.OrdinalIgnoreCase)) paths.Add(exe);
+   static Game ReadGame(Dictionary<string,object> row,Dictionary<string,object> app,List<XElement> profiles,string storage,out string reason) {
+    reason="불완전한 NVIDIA 검색 항목"; if(app==null) return null;
+    if(Flag(app,"IsCreativeApplication")==true) { reason="게임 외 크리에이티브 앱"; return null; }
+    string name=Str(app,"DisplayName")??"이름 없는 항목";
+    var profile=Profile(app,profiles); bool? denied=Flag(app,"Disable_FG_Override"), profileDenied=ProfileFg(profile);
+    if(denied==true || profileDenied==true) { reason="NVIDIA FG override 차단 프로필"; return null; }
+    bool fpOk=Flag(app,"IsFingerprintDetected")==true;
+    bool profileOk=denied==false || profileDenied==false;
+    string root=Str(app,"InstallDirectory");
+    if(String.IsNullOrWhiteSpace(root)||!Path.IsPathRooted(root)||!Directory.Exists(root)) { reason="설치 경로 없음 / 제거된 게임"; return LockedGame(row,app,name,reason,storage); }
+    root=Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar);
+    if(root.Length<=3) { reason="게임 설치 폴더로 볼 수 없는 드라이브 루트"; return LockedGame(row,app,name,reason,storage); }
+    Disk.Safe(root);
+    string driver=Resolve(root,Str(app,"DriverProfile"));
+    if(driver==null && profile!=null) driver=Resolve(root,(string)profile.Element("DriverProfile"));
+    var paths=new List<string>(); if(driver!=null) paths.Add(driver);
+    foreach(string value in Strings(Field(app,"DetectedFiles")).Concat(Strings(Field(app,"ImageFiles")))) {
+     string exe=Resolve(root,value); if(exe!=null && !paths.Contains(exe,StringComparer.OrdinalIgnoreCase)) paths.Add(exe);
+    }
+    if(paths.Count==0) { reason="NVIDIA 기록에 유효한 x64 실행 파일 없음"; return null; }
+    bool complete=true; string dlssg=FindDlssg(root,0,ref complete);
+    if(dlssg==null) { reason=complete?"게임 폴더에 x64 nvngx_dlssg.dll 없음 (SR만으로는 FG 판정 불가)":"FG 파일 확인 불완전: 접근 불가 또는 탐색 한도"; return null; }
+    return new Game {
+     Name=Str(app,"DisplayName")??Path.GetFileName(root), Root=root, Source="NVIDIA App · FG DLL 확인",
+     NvidiaId=Id(Field(row,"LocalId")), StorageFile=storage, CanEnable=true,
+     Exe=driver??(paths.Count==1?paths[0]:null), Executables=paths,
+     Evidence=(fpOk?"NVIDIA fingerprint 확인":"NVIDIA fingerprint 미확인 · DLSS 파일 기준으로 허용")+(profileOk?" · FG 차단 없음":" · FG 프로필 미확인 · DLSS 파일 기준으로 허용")+"\nFG 구성 파일: "+dlssg
+    };
    }
-   if(paths.Count==0) { reason="NVIDIA 기록에 유효한 x64 실행 파일 없음"; return null; }
-   bool complete=true; string dlssg=FindDlssg(root,0,ref complete);
-   if(dlssg==null) { reason=complete?"게임 폴더에 x64 nvngx_dlssg.dll 없음 (SR만으로는 FG 판정 불가)":"FG 파일 확인 불완전: 접근 불가 또는 탐색 한도"; return null; }
-   return new Game {
-    Name=Str(app,"DisplayName")??Path.GetFileName(root), Root=root, Source="NVIDIA App · FG DLL 확인",
-    NvidiaId=Id(Field(row,"LocalId")), StorageFile=storage, CanEnable=true,
-    Exe=driver??(paths.Count==1?paths[0]:null), Executables=paths,
-    Evidence="NVIDIA fingerprint 확인 · FG 차단 없음\nFG 구성 파일: "+dlssg
-   };
-  }
   static string Resolve(string root,string candidate) {
    if(String.IsNullOrWhiteSpace(candidate)||!candidate.EndsWith(".exe",StringComparison.OrdinalIgnoreCase)) return null;
    string path=Path.GetFullPath(Path.IsPathRooted(candidate)?candidate:Path.Combine(root,candidate));

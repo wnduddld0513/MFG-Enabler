@@ -17,7 +17,7 @@
     <ApplicationManifest>../src/app.manifest</ApplicationManifest>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <Version>1.0</Version>
+    <Version>1.1</Version>
     <AppReleaseVersion Condition="'$(AppReleaseVersion)' == ''">$(Version)</AppReleaseVersion>
     <InformationalVersion>$(AppReleaseVersion)</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
@@ -35,11 +35,6 @@
     <Compile Include="../src/AppUpdates.cs" Link="Core/AppUpdates.cs" />
     <EmbeddedResource Include="../src/app-update.ps1" LogicalName="app-update.ps1" />
     <EmbeddedResource Include="../src/payload.lock" LogicalName="payload.lock" />
-    <EmbeddedResource Include="../src/native/bin/nvapi64.dll" LogicalName="spoof5080.dll" />
   </ItemGroup>
-  <Target Name="BuildNativeProxy" BeforeTargets="PrepareForBuild">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)/../build-native.ps1&quot;" />
-  </Target>
 </Project>
-
 

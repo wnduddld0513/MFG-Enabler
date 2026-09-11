@@ -4,6 +4,19 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using MfgEnabler;
 
+if (args.Length == 5 && args[0] == "--verify-release")
+{
+    var release = AppUpdates.SelectRelease(File.ReadAllText(args[1]), args[3], args[4])
+        ?? throw new Exception("Release is not offered to the installed version/channel.");
+    using (var stream = File.OpenRead(args[2]))
+        if (stream.Length != release.Size || !Convert.ToHexString(SHA256.HashData(stream)).Equals(release.Digest, StringComparison.OrdinalIgnoreCase))
+            throw new Exception("Release asset size or digest mismatch.");
+    string stage = Path.Combine(Path.GetTempPath(), "MFG-release-validation-" + Guid.NewGuid().ToString("N"));
+    AppUpdates.ExtractPackage(args[2], stage, release.Version);
+    Console.WriteLine("PASS published release selection, SHA-256, extraction and embedded version: " + release.Version);
+    return;
+}
+
 if (File.Exists(Path.Combine(AppContext.BaseDirectory, "restart-probe")))
 {
     File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "restarted"), "ok");

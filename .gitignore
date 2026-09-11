@@ -1,5 +1,7 @@
 .cache/
 dist/
+releases/
+MFG-Enabler-Installer/output/
 NVIDIA App.exe
 NVIDIA Corporation/
 *.user

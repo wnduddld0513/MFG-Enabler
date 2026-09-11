@@ -46,12 +46,13 @@ namespace MfgEnabler {
    }
   }
   public static Dictionary<string,string[]> Specs() { return Updates.Current().Files.ToDictionary(f=>f.Name,f=>new[]{f.Name,f.Path,f.Hash,f.Blob}); }
-  public static byte[] SpoofBytes() { using(var input=Assembly.GetExecutingAssembly().GetManifestResourceStream("spoof5080.dll")) using(var output=new MemoryStream()) { if(input==null) throw new IOException("RTX 5080 프록시 리소스가 없습니다."); input.CopyTo(output); return output.ToArray(); } }
   static string cacheOverride;
   public static string Cache {get{return cacheOverride??Updates.DirectoryFor(Updates.Current());}set{cacheOverride=value;}}
-  public static void Ensure(string proxy,Action<string> progress) {
-   var package=Updates.Current();foreach(var name in new[]{proxy,"dlssg_sm86.ini"})Updates.Ensure(package,name,progress,cacheOverride);
-  }
+   public static void Ensure(string proxy,string channel,Action<string> progress) {
+    var package=Updates.Current();
+    if((package.Channel??"dlssg_for_sm86")!=channel)package=Updates.FetchLatest(Updates.BaselineFor(channel),channel,progress);
+    foreach(var name in new[]{proxy,"dlssg_sm86.ini"})Updates.Ensure(package,name,progress,cacheOverride);
+   }
  }
 
  public class Installer {
@@ -91,11 +92,7 @@ namespace MfgEnabler {
    foreach(var n in new[]{proxy,"dlssg_sm86.ini"}) if(Disk.Hash(Path.Combine(payload,n))!=Payload.Specs()[n][2]) throw new IOException("설치 파일 검증 실패: "+n);
    InstallFiles(proxy,new[]{proxy,"dlssg_sm86.ini"}.ToDictionary(n=>n,n=>File.ReadAllBytes(Path.Combine(payload,n))));
   }
-   public void EnableSpoof() {
-    if(!IsSpoof) throw new IOException("잘못된 설치 종류");
-    InstallFiles("nvapi64.dll",new Dictionary<string,byte[]>{{"nvapi64.dll",Payload.SpoofBytes()}});
-   }
-  void InstallFiles(string proxy,Dictionary<string,byte[]> files) {
+   void InstallFiles(string proxy,Dictionary<string,byte[]> files) {
    Disk.Safe(Target);CheckRunning(Target);var old=Load();
    if(old!=null&&old.Phase!="disabled")throw new IOException("먼저 해당 기능을 해제하거나 복구하세요.");
     Directory.CreateDirectory(Store); Disk.Safe(Store); var j=new Journal{Target=Target,Phase="installing",Proxy=proxy};
