@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>SYSLIB0014;SYSLIB0021</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/Core.cs" Link="Core.cs" />
+    <Compile Include="../../src/Updates.cs" Link="Updates.cs" />
+    <Compile Include="../../src/Discovery.cs" Link="Discovery.cs" />
+    <Compile Include="../../WinUI/LegacyJson.cs" Link="LegacyJson.cs" />
+    <EmbeddedResource Include="../../src/payload.lock" LogicalName="payload.lock" />
+  </ItemGroup>
+</Project>

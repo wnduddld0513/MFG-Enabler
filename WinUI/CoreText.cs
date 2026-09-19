@@ -88,7 +88,6 @@ internal static class CoreText
         ("dlssg_for_sm86 버전 안내 파일이 없습니다.", "dlssg_for_sm86 version metadata is missing."),
         ("dlssg_for_sm86 업데이트 대상이 아닙니다.", "Not eligible for dlssg_for_sm86 updates."),
         ("dlssg_for_sm86 최신 버전 확인 중…", "Checking the latest dlssg_for_sm86 version…"),
-        ("v310.9.1 최신 버전 확인 중…", "Checking the latest v310.9.1 version…"),
         ("x64 DLL 형식이 아닙니다: ", "Not an x64 DLL: "),
         (" · 적용 보류: ", " · Deferred: "), (" 다운로드 중…", " downloading…"), (" 적용 중…", " applying…"),
         (": 중복 실행 경로", ": duplicate executable path"), ("개 · 제외 ", " · Excluded "), ("개 · FG 구성 확인 ", " · FG verified "),

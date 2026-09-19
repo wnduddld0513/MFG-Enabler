@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -36,21 +36,21 @@ namespace MfgEnabler {
   public static void Save<T>(string p,T value) { using(var m=new MemoryStream()) { new DataContractJsonSerializer(typeof(T)).WriteObject(m,value); Write(p,m.ToArray()); } }
  }
  public static class Payload {
-  public const string Revision="5f62ff44a9c08f9841fa605e7b7160f79ccd2c40";
-  public const string BaselineVersion="0.2.4";
-  public static readonly string[] Proxies={"version.dll","winmm.dll","dinput8.dll","winhttp.dll","dxgi.dll"};
+  public const string Revision="196fcb61ef414992a6bef2d237ff609aab09f0d9";
+  public const string BaselineVersion="0.3.4";
+  public static readonly string[] Proxies={"version.dll","winmm.dll","dinput8.dll","dxgi.dll","d3d12.dll","dbghelp.dll"};
   public static RuntimePackage Baseline() {
    using(var r=new StreamReader(Assembly.GetExecutingAssembly().GetManifestResourceStream("payload.lock"))) {
     var files=r.ReadToEnd().Split(new[]{'\r','\n'},StringSplitOptions.RemoveEmptyEntries).Select(x=>x.Trim('\uFEFF').Split('|')).Select(x=>new PackageFile{Name=x[0],Path=x[1],Hash=x[2],Blob=x[3]}).ToList();
-    return new RuntimePackage{Revision=Revision,Version=BaselineVersion,Files=files};
+    return new RuntimePackage{Revision=Revision,Version=BaselineVersion,Channel=Updates.Channel,Files=files};
    }
   }
   public static Dictionary<string,string[]> Specs() { return Updates.Current().Files.ToDictionary(f=>f.Name,f=>new[]{f.Name,f.Path,f.Hash,f.Blob}); }
   static string cacheOverride;
   public static string Cache {get{return cacheOverride??Updates.DirectoryFor(Updates.Current());}set{cacheOverride=value;}}
-   public static void Ensure(string proxy,string channel,Action<string> progress) {
+   public static void Ensure(string proxy,Action<string> progress) {
     var package=Updates.Current();
-    if((package.Channel??"dlssg_for_sm86")!=channel)package=Updates.FetchLatest(Updates.BaselineFor(channel),channel,progress);
+    package=Updates.Prepare(package,progress);
     foreach(var name in new[]{proxy,"dlssg_sm86.ini"})Updates.Ensure(package,name,progress,cacheOverride);
    }
  }
@@ -73,7 +73,7 @@ namespace MfgEnabler {
     Disk.Safe(Store); if(!File.Exists(StateFile)) return null; var j=Disk.Read<Journal>(StateFile);
    if(j==null || !String.Equals(j.Target,Target,StringComparison.OrdinalIgnoreCase) || j.Files==null) throw new IOException("복구 기록이 유효하지 않습니다.");
     var expected=IsSpoof?new[]{"nvapi64.dll"}:new[]{j.Proxy,"dlssg_sm86.ini"};
-    bool proxyOk=IsSpoof?j.Proxy=="nvapi64.dll":Payload.Proxies.Contains(j.Proxy);
+    bool proxyOk=IsSpoof?j.Proxy=="nvapi64.dll":(Payload.Proxies.Contains(j.Proxy)||j.Proxy=="winhttp.dll");
     if(!proxyOk || j.Files.Count!=expected.Length || j.Files.Any(e=>e==null) || j.Files.Select(e=>e.Name).Distinct().Count()!=expected.Length || j.Files.Any(e=>!expected.Contains(e.Name))) throw new IOException("복구 파일 목록이 유효하지 않습니다.");
    foreach(var e in j.Files) { if(e.Backup==null || e.Backup!=Path.GetFileName(e.Backup) || e.Backup.IndexOfAny(Path.GetInvalidFileNameChars())>=0 || e.Backup=="." || e.Backup=="..") throw new IOException("잘못된 백업 경로"); Disk.Safe(Path.Combine(Store,e.Backup)); Disk.Safe(Path.Combine(Target,e.Name)); }
    foreach(var e in j.Files){if(e.Previous!=null&&(e.Previous.Length!=64||e.UpgradeBackup==null||e.UpgradeBackup!=Path.GetFileName(e.UpgradeBackup)||e.UpgradeBackup.IndexOfAny(Path.GetInvalidFileNameChars())>=0))throw new IOException("잘못된 업데이트 복구 기록");if(e.UpgradeBackup!=null)Disk.Safe(Path.Combine(Store,e.UpgradeBackup));}
@@ -87,12 +87,14 @@ namespace MfgEnabler {
    if(IsSpoof) throw new IOException("RTX 5080 설치는 EnableSpoof를 사용하세요.");
    if(!Payload.Proxies.Contains(proxy)) throw new IOException("지원하지 않는 프록시"); Disk.Safe(Target); CheckRunning(Target);
    var old=Load(); if(old!=null&&old.Phase!="disabled") throw new IOException("먼저 기존 적용을 해제하거나 복구하세요.");
-   if(File.Exists(Path.Combine(Target,proxy))) throw new IOException(proxy+" 파일이 이미 있습니다. 다른 프록시를 선택하세요. 기존 모드는 덮어쓰지 않습니다.");
+
    foreach(var p in Payload.Proxies) if(File.Exists(Path.Combine(Target,p)) && Disk.Hash(Path.Combine(Target,p))==Payload.Specs()[p][2]) throw new IOException("수동 설치된 DLSSG 프록시가 있습니다: "+p+". 먼저 수동 설치를 정리하세요.");
-   foreach(var n in new[]{proxy,"dlssg_sm86.ini"}) if(Disk.Hash(Path.Combine(payload,n))!=Payload.Specs()[n][2]) throw new IOException("설치 파일 검증 실패: "+n);
-   InstallFiles(proxy,new[]{proxy,"dlssg_sm86.ini"}.ToDictionary(n=>n,n=>File.ReadAllBytes(Path.Combine(payload,n))));
+   var package=Updates.Current();
+   var files=new[]{proxy,"dlssg_sm86.ini"}.ToDictionary(n=>n,n=>File.ReadAllBytes(Updates.FileFor(package,n,payload)));
+   foreach(var pair in files)Updates.ValidateInstallBytes(package,pair.Key,pair.Value);
+   InstallFiles(proxy,files);
   }
-   void InstallFiles(string proxy,Dictionary<string,byte[]> files) {
+   void InstallFiles(string proxy,Dictionary<string,byte[]> files,RuntimePackage package=null) {
    Disk.Safe(Target);CheckRunning(Target);var old=Load();
    if(old!=null&&old.Phase!="disabled")throw new IOException("먼저 해당 기능을 해제하거나 복구하세요.");
     Directory.CreateDirectory(Store); Disk.Safe(Store); var j=new Journal{Target=Target,Phase="installing",Proxy=proxy};
@@ -107,41 +109,86 @@ namespace MfgEnabler {
    try {
     int step=0;foreach(var e in j.Files){if(Disk.Hash(Path.Combine(Target,e.Name))!=e.Original)throw new IOException("설치 중 원본 변경 감지");Disk.Write(Path.Combine(Target,e.Name),files[e.Name]);if(Fault!=null)Fault(++step);}
     if(j.Files.Any(e=>Disk.Hash(Path.Combine(Target,e.Name))!=e.Installed))throw new IOException("설치 후 검증 실패");
-     j.Phase="enabled";if(!IsSpoof){var runtime=Updates.Current();j.RuntimeVersion=runtime.Version;j.RuntimeRevision=runtime.Revision;}Disk.Save(StateFile,j);
+     j.Phase="enabled";if(!IsSpoof){var runtime=package??Updates.Current();j.RuntimeVersion=runtime.Version;j.RuntimeRevision=runtime.Revision;}Disk.Save(StateFile,j);
    } catch {try{Restore();}catch{} throw;}
   }
+  static bool IsIni(Entry e) => e.Name=="dlssg_sm86.ini";
+  bool CanRestore(Entry e,string hash,string phase) => IsIni(e)||hash==e.Installed||hash==e.Original||hash==null||((phase=="updating"||phase=="restoring")&&hash==e.Previous);
+  string OriginalAfterRestore(Entry e) => IsIni(e)?null:e.Original;
+  void VerifyLogCleanup() {
+   if(IsSpoof)return;
+   foreach(string name in new[]{"dlssg_sm86.log","dlssg_sm86_loader.log"}) {
+    string path=Path.Combine(Target,name);Disk.Safe(path);if(Directory.Exists(path))throw new IOException("A directory blocks log cleanup: "+name);
+   }
+   string logs=Path.Combine(Target,"dlssg_sm86","logs");Disk.Safe(logs);
+   if(File.Exists(logs))throw new IOException("A file blocks log cleanup.");
+   if(Directory.Exists(logs))VerifyLogTree(logs);
+  }
+  static void VerifyLogTree(string folder) {
+   Disk.Safe(folder);
+   foreach(string file in Directory.GetFiles(folder))Disk.Safe(file);
+   foreach(string child in Directory.GetDirectories(folder)){Disk.Safe(child);VerifyLogTree(child);}
+  }
+  void CleanupLogs() {
+   if(IsSpoof)return;VerifyLogCleanup();
+   foreach(string name in new[]{"dlssg_sm86.log","dlssg_sm86_loader.log"}) {
+    string path=Path.Combine(Target,name);if(File.Exists(path))File.Delete(path);
+   }
+   string root=Path.Combine(Target,"dlssg_sm86"),logs=Path.Combine(root,"logs");
+   if(Directory.Exists(logs))DeleteLogTree(logs);
+   if(Directory.Exists(root)&&!Directory.EnumerateFileSystemEntries(root).Any())Directory.Delete(root);
+  }
+  static void DeleteLogTree(string folder) {
+   Disk.Safe(folder);
+   foreach(string file in Directory.GetFiles(folder)){Disk.Safe(file);File.Delete(file);}
+   foreach(string child in Directory.GetDirectories(folder))DeleteLogTree(child);
+   Directory.Delete(folder);
+  }
   public void VerifyRestore() {
-   Disk.Safe(Target);CheckRunning(Target);var j=Load();if(j==null||j.Phase=="disabled")return;
-   foreach(var e in j.Files){var path=Path.Combine(Target,e.Name);if(Directory.Exists(path))throw new IOException("복구 경로에 폴더가 있습니다: "+e.Name);string now=Disk.Hash(path);if(now!=e.Installed&&now!=e.Original&&now!=null&&!((j.Phase=="updating"||j.Phase=="restoring")&&now==e.Previous))throw new IOException(e.Name+"이 설치 후 변경되었습니다. 파일을 다른 폴더에 보관한 뒤 다시 해제하세요.");if(e.Original!=null&&Disk.Hash(Path.Combine(Store,e.Backup))!=e.Original)throw new IOException("원본 백업 손상: "+e.Name);}
+   Disk.Safe(Target);CheckRunning(Target);var j=Load();if(j==null)return;
+   VerifyLogCleanup();
+   if(j.Phase=="disabled")return;
+   foreach(var e in j.Files) {
+    var path=Path.Combine(Target,e.Name);if(Directory.Exists(path))throw new IOException("A directory blocks restore: "+e.Name);
+    if(!CanRestore(e,Disk.Hash(path),j.Phase))throw new IOException("Installed DLL changed; preserve it elsewhere before restoring: "+e.Name);
+    if(!IsIni(e)&&e.Original!=null&&Disk.Hash(Path.Combine(Store,e.Backup))!=e.Original)throw new IOException("Original backup is damaged: "+e.Name);
+   }
   }
   public void Upgrade(RuntimePackage package) {
-     if(IsSpoof)throw new IOException("dlssg_for_sm86 업데이트 대상이 아닙니다.");
-   Updates.Validate(package);VerifyRestore();var j=Load();if(j==null||j.Phase!="enabled")throw new IOException("적용된 MFG만 업데이트할 수 있습니다.");
+   if(IsSpoof)throw new IOException("Not a runtime installation.");
+   Updates.Validate(package);VerifyRestore();var journal=Load();
+   if(journal==null||journal.Phase!="enabled")throw new IOException("Only an enabled installation can be updated.");
+   string proxy=Payload.Proxies.Contains(journal.Proxy)?journal.Proxy:"version.dll";
+   // Validate the entire incoming pair before touching the installed game.
    var bytes=new Dictionary<string,byte[]>();
-   foreach(var e in j.Files){if(Disk.Hash(Path.Combine(Target,e.Name))!=e.Installed)throw new IOException("설치 파일 변경 감지: "+e.Name);var spec=package.Files.Single(f=>f.Name==e.Name);var data=File.ReadAllBytes(Path.Combine(Updates.DirectoryFor(package),e.Name));if(Disk.HashBytes(data)!=spec.Hash)throw new IOException("업데이트 캐시 검증 실패");bytes[e.Name]=data;}
-   foreach(var e in j.Files){e.Previous=e.Installed;e.UpgradeBackup=Guid.NewGuid().ToString("N")+".upg";Disk.Write(Path.Combine(Store,e.UpgradeBackup),File.ReadAllBytes(Path.Combine(Target,e.Name)));if(Disk.Hash(Path.Combine(Store,e.UpgradeBackup))!=e.Previous)throw new IOException("업데이트 직전 파일 변경 감지");e.Installed=Disk.HashBytes(bytes[e.Name]);}
-   j.Phase="updating";Disk.Save(StateFile,j);
-   try {
-    foreach(var e in j.Files){if(Disk.Hash(Path.Combine(Target,e.Name))!=e.Previous)throw new IOException("업데이트 도중 파일 변경 감지");Disk.Write(Path.Combine(Target,e.Name),bytes[e.Name]);}
-    if(j.Files.Any(e=>Disk.Hash(Path.Combine(Target,e.Name))!=e.Installed))throw new IOException("업데이트 후 검증 실패");
-   }catch {
-    // Revert to the previous installed runtime without touching original backups.
-    try {
-     foreach(var e in j.Files){var now=Disk.Hash(Path.Combine(Target,e.Name));if(now!=e.Previous&&now!=e.Installed)throw new IOException("업데이트 복구 중 외부 변경 감지");if(Disk.Hash(Path.Combine(Store,e.UpgradeBackup))!=e.Previous)throw new IOException("업데이트 백업 손상");}
-     foreach(var e in j.Files){Disk.Write(Path.Combine(Target,e.Name),File.ReadAllBytes(Path.Combine(Store,e.UpgradeBackup)));e.Installed=e.Previous;e.Previous=null;e.UpgradeBackup=null;}
-     j.Phase="enabled";Disk.Save(StateFile,j);
-    }catch{}throw;
+   foreach(string name in new[]{proxy,"dlssg_sm86.ini"}) {
+    byte[] data=File.ReadAllBytes(Updates.FileFor(package,name));Updates.ValidateInstallBytes(package,name,data);bytes[name]=data;
    }
-   j.Phase="enabled";j.RuntimeVersion=package.Version;j.RuntimeRevision=package.Revision;foreach(var e in j.Files){e.Previous=null;e.UpgradeBackup=null;}Disk.Save(StateFile,j);
+   Restore();
+   // Original DLLs are now in place. InstallFiles backs those originals up, not the old mod.
+   // If installation fails, its journal restores the original game state again.
+   InstallFiles(proxy,bytes,package);
   }
-   public static bool HasAny(string folder){return new Installer(folder).Status()!="미적용"||new Installer(folder,true).Status()!="미적용";}
+   public static bool HasAny(string folder){var mfg=new Installer(folder);return mfg.Status()!="미적용"||new Installer(folder,true).Status()!="미적용"||mfg.NeedsCleanup();}
+   bool NeedsCleanup(){return Load()!=null&&(File.Exists(Path.Combine(Target,"dlssg_sm86.ini"))||Directory.Exists(Path.Combine(Target,"dlssg_sm86","logs"))||File.Exists(Path.Combine(Target,"dlssg_sm86.log"))||File.Exists(Path.Combine(Target,"dlssg_sm86_loader.log")));}
    public static void RestoreAll(string folder){var mfg=new Installer(folder);var spoof=new Installer(folder,true);mfg.VerifyRestore();spoof.VerifyRestore();spoof.Restore();mfg.Restore();}
   public void Restore() {
-   VerifyRestore(); var j=Load(); if(j==null||j.Phase=="disabled") return;
-   foreach(var e in j.Files) { string now=Disk.Hash(Path.Combine(Target,e.Name)); if(now!=e.Installed && now!=e.Original && now!=null && !((j.Phase=="updating"||j.Phase=="restoring") && now==e.Previous)) throw new IOException(e.Name+"이 설치 후 변경되었습니다. 파일을 다른 폴더에 보관한 뒤 다시 해제하세요."); if(e.Original!=null && Disk.Hash(Path.Combine(Store,e.Backup))!=e.Original) throw new IOException("원본 백업 손상: "+e.Name); }
-   bool interruptedUpdate=j.Files.Any(e=>e.Previous!=null); j.Phase="restoring"; Disk.Save(StateFile,j); int step=0;
-   foreach(var e in j.Files) { var path=Path.Combine(Target,e.Name); var now=Disk.Hash(path); if(now!=e.Installed && now!=e.Original && now!=null && !(interruptedUpdate && now==e.Previous)) throw new IOException("복구 중 파일 변경 감지"); if(e.Original!=null) Disk.Write(path,File.ReadAllBytes(Path.Combine(Store,e.Backup))); else if(File.Exists(path)) File.Delete(path); if(Fault!=null) Fault(++step); }
-   if(j.Files.Any(e=>Disk.Hash(Path.Combine(Target,e.Name))!=e.Original)) throw new IOException("복구 검증 실패"); j.Phase="disabled"; Disk.Save(StateFile,j);
+   VerifyRestore();var j=Load();if(j==null)return;
+   if(j.Phase=="disabled") {
+    // An older app may have left INI/log files after restoring the DLL.
+    if(!IsSpoof) {string ini=Path.Combine(Target,"dlssg_sm86.ini");Disk.Safe(ini);if(File.Exists(ini))File.Delete(ini);CleanupLogs();}
+    return;
+   }
+   j.Phase="restoring";Disk.Save(StateFile,j);int step=0;
+   foreach(var e in j.Files) {
+    string path=Path.Combine(Target,e.Name);Disk.Safe(path);
+    if(!CanRestore(e,Disk.Hash(path),j.Phase))throw new IOException("File changed during restore: "+e.Name);
+    if(OriginalAfterRestore(e)!=null)Disk.Write(path,File.ReadAllBytes(Path.Combine(Store,e.Backup)));
+    else if(File.Exists(path))File.Delete(path);
+    if(Fault!=null)Fault(++step);
+   }
+   if(j.Files.Any(e=>Disk.Hash(Path.Combine(Target,e.Name))!=OriginalAfterRestore(e)))throw new IOException("Restore verification failed.");
+   CleanupLogs();j.Phase="disabled";Disk.Save(StateFile,j);
   }
  }
 }

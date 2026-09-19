@@ -17,8 +17,8 @@
     <ApplicationManifest>../src/app.manifest</ApplicationManifest>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <Version>1.1</Version>
-    <AppReleaseVersion Condition="'$(AppReleaseVersion)' == ''">$(Version)</AppReleaseVersion>
+    <Version>1.2</Version>
+    <AppReleaseVersion Condition="'$(AppReleaseVersion)' == ''">1.2b1</AppReleaseVersion>
     <InformationalVersion>$(AppReleaseVersion)</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
