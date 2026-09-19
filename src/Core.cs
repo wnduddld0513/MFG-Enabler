@@ -154,6 +154,32 @@ namespace MfgEnabler {
     if(!IsIni(e)&&e.Original!=null&&Disk.Hash(Path.Combine(Store,e.Backup))!=e.Original)throw new IOException("Original backup is damaged: "+e.Name);
    }
   }
+  public bool CanEditIni() {
+   var j=Load();return !IsSpoof&&j?.Phase=="enabled"&&Version.TryParse(j.RuntimeVersion,out var version)&&version.Major==0&&version>=new Version("0.3.4");
+  }
+  public RuntimeIniSettings ReadIniSettings() {
+   if(!CanEditIni())throw new IOException("Install runtime 0.3.4 or newer before editing the INI.");
+   string path=Path.Combine(Target,"dlssg_sm86.ini");Disk.Safe(path);
+   return RuntimeIni.Read(File.ReadAllBytes(path));
+  }
+  public void SaveIniSettings(RuntimeIniSettings settings) {
+   settings.Validate();Disk.Safe(Target);CheckRunning(Target);
+   if(!CanEditIni())throw new IOException("Install runtime 0.3.4 or newer before editing the INI.");
+   var j=Load();
+   foreach(var dll in j.Files.Where(e=>e.Name.EndsWith(".dll")))
+    if(Disk.Hash(Path.Combine(Target,dll.Name))!=dll.Installed)throw new IOException("Installed DLL changed; restore it before editing settings.");
+   var entry=j.Files.Single(e=>e.Name=="dlssg_sm86.ini");string path=Path.Combine(Target,entry.Name);
+   Disk.Safe(path);byte[] before=File.ReadAllBytes(path),after=RuntimeIni.Apply(before,settings);
+   string oldHash=entry.Installed;
+   if(Disk.Hash(path)!=Disk.HashBytes(before))throw new IOException("INI changed while saving.");
+   try {
+    Disk.Write(path,after);if(Fault!=null)Fault(1);
+    entry.Installed=Disk.HashBytes(after);Disk.Save(StateFile,j);
+   }catch {
+    if(Disk.Hash(path)==Disk.HashBytes(after))Disk.Write(path,before);
+    entry.Installed=oldHash;throw;
+   }
+  }
   public void Upgrade(RuntimePackage package) {
    if(IsSpoof)throw new IOException("Not a runtime installation.");
    Updates.Validate(package);VerifyRestore();var journal=Load();

@@ -219,6 +219,7 @@ public sealed partial class MainWindow : Window
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(AutoSwitch, AutoLabel.Text);
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(LanguageCombo, LanguageLabel.Text);
         LoadingText.Text = L("Loading…", "불러오는 중…");
+        ApplyIniLanguage();
         RefreshCount(); UpdateState();
     }
     void ShowPage(bool showSettings)
@@ -307,7 +308,7 @@ public sealed partial class MainWindow : Window
                 L("Choose the rendering executable recorded by NVIDIA App.", "NVIDIA App이 기록한 렌더링 실행 파일을 선택하세요."));
         }
         catch (Exception error) { MfgSwitch.IsEnabled = RestoreButton.IsEnabled = ProxyCombo.IsEnabled = false; StateText.Text = L("Cannot read this target. ", "대상 확인 실패. ") + error.Message; }
-        finally { loading = previous; }
+        finally { loading = previous; RefreshIniEditor(); }
     }
     void SetBusy(bool value)
     {

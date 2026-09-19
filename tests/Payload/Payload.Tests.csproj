@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/Core.cs" Link="Core.cs" />
+    <Compile Include="../../src/RuntimeIni.cs" Link="RuntimeIni.cs" />
     <Compile Include="../../src/Updates.cs" Link="Updates.cs" />
     <Compile Include="../../src/Discovery.cs" Link="Discovery.cs" />
     <Compile Include="../../WinUI/LegacyJson.cs" Link="LegacyJson.cs" />

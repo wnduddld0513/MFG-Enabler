@@ -1,4 +1,4 @@
-# MFG-Enabler 1.2b1
+# MFG-Enabler 1.2b2
 
 <img width="1940" height="1354" alt="ui2" src="https://github.com/user-attachments/assets/2f6db7c1-3b62-4e9a-b74f-a55a6a1746d2" />
 <img width="1940" height="1354" alt="ui1" src="https://github.com/user-attachments/assets/a85754a4-f826-4e03-8b8d-678f7e9ea007" />
@@ -23,17 +23,17 @@ Enable in-game MFG option (on RTX 4060 Laptop)
 Tested on RTX 3070, RTX 4060 Laptop, Cyberpunk 2077
 
 
-MFG-Enabler manages the sdli1995/dlssg_for_sm86 runtime in supported Windows games. Version 1.2b1 supports the upstream 0.3.4 source ZIP layout and restores an existing installation before upgrading it.
+MFG-Enabler manages the sdli1995/dlssg_for_sm86 runtime in supported Windows games. Version 1.2b2 supports the upstream 0.3.4 source ZIP layout and restores an existing installation before upgrading it.
 
-## Changes in 1.2b1
+## Changes in 1.2b2
 
-- Uses sdli1995/dlssg_for_sm86 as the only runtime source. The retired runtime selector and its incompatible INI editor have been removed.
+- Uses sdli1995/dlssg_for_sm86 as the only runtime source. The retired runtime selector has been removed; the editor now uses the supported runtime settings.
 - Downloads the latest stable upstream release as a source ZIP pinned to its resolved commit. Only the required runtime files are extracted, verified against the commit's Git blob hashes, and checked for x64 compatibility.
 - Supports `version.dll` and the alternatives `winmm.dll`, `dinput8.dll`, `dxgi.dll`, `d3d12.dll`, and `dbghelp.dll`. One selected DLL and `dlssg_sm86.ini` are installed beside the rendering executable.
 - Updates restore the previous installation first, then install the verified new files. Original DLLs are backed up in the game's existing `.mfg-enabler` folder.
 - Restore removes the runtime INI, including local edits, and the default runtime logs. It restores the original proxy DLL, or removes the proxy when no original existed.
 
-See [the 1.2b1 release notes](docs/RELEASE-NOTES-1.2b1.md).
+See [the 1.2b2 release notes](docs/RELEASE-NOTES-1.2b2.md).
 
 ## Requirements and usage
 
@@ -46,8 +46,22 @@ Windows 10 version 2004 or later, or Windows 11, x64, and an internet connection
 
 Keep the game's `.mfg-enabler` folder: it contains recovery records and original DLL backups. Do not copy a modded DLL over an original backup.
 
-The upstream factory INI is used for installations and updates. Existing custom INI settings are removed during restore and reset during an upgrade. The old runtime-specific editor is no longer available.
+The upstream factory INI is used for installations and updates. Existing custom INI settings are removed during restore and reset during an upgrade.
 
+## INI editor
+
+After installing runtime 0.3.4 or newer, open the selected game's **Runtime INI settings** below the MFG toggle. The editor reads that game's installed `dlssg_sm86.ini`.
+
+| Control | INI setting | Choices |
+| --- | --- | --- |
+| Optimization tier | `[FrameGeneration] Optimized` | 0: stock; 1: original image, default; 2-3: faster with image-quality loss |
+| Frame-generation ceiling | `[FrameGeneration] MaxGeneratedFrames` | 0: runtime limit; 1-5: up to 2X-6X; default 3: 4X |
+| Render preset | `[Compatibility] Preset` | Auto, A (UI recomposition off), B (on) |
+| Log level | `[Logging] Level` | 0: off; 1: errors; 2: configuration; 3: detailed |
+
+The multiplier is a ceiling; the game chooses the actual count. 6X requires a compatible game. Preset B only works when the game supplies the required HUD/UI data. These choices follow the [upstream configuration guide](https://github.com/sdli1995/dlssg_for_sm86/blob/0.3.4/docs/INSTALL.en.md).
+
+Close the game, adjust the controls, and click **Save settings**. **Reset shown settings** selects the factory values for these four controls; click Save to apply them. Other INI keys, comments, and custom paths are retained. The editor updates the recovery record without changing original DLL backups. Runtime upgrades reset the INI to stock values.
 ## Updates and recovery
 
 Runtime updates and application updates are separate. Enable automatic runtime updates to check once per launch. Runtime updates use stable upstream releases, not the moving `main` branch.
@@ -71,10 +85,10 @@ Install Visual Studio 2026 with the .NET 10 SDK and WinUI development components
 This publishes the app and required runtimes to `dist`. For a versioned Beta ZIP:
 
 ```powershell
-.\build-release.ps1 -Version 1.2b1
+.\build-release.ps1 -Version 1.2b2
 ```
 
-Output: `releases/MFG-Enabler-Package-1.2b1.zip`. Extract the entire ZIP before starting `MFG-Enabler.exe`. Published downloads are available from [GitHub Releases](https://github.com/wnduddld0513/MFG-Enabler/releases); automatic Source code archives of MFG-Enabler itself are not runnable app packages.
+Output: `releases/MFG-Enabler-Package-1.2b2.zip`. Extract the entire ZIP before starting `MFG-Enabler.exe`. Published downloads are available from [GitHub Releases](https://github.com/wnduddld0513/MFG-Enabler/releases); automatic Source code archives of MFG-Enabler itself are not runnable app packages.
 
 Run recovery and update tests:
 

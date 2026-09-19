@@ -18,7 +18,7 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <Version>1.2</Version>
-    <AppReleaseVersion Condition="'$(AppReleaseVersion)' == ''">1.2b1</AppReleaseVersion>
+    <AppReleaseVersion Condition="'$(AppReleaseVersion)' == ''">1.2b2</AppReleaseVersion>
     <InformationalVersion>$(AppReleaseVersion)</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
@@ -30,6 +30,7 @@
     <Content Update="Assets/MFG-Enabler.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260804001" />
     <Compile Include="../src/Core.cs" Link="Core/Core.cs" />
+    <Compile Include="../src/RuntimeIni.cs" Link="Core/RuntimeIni.cs" />
     <Compile Include="../src/Discovery.cs" Link="Core/Discovery.cs" />
     <Compile Include="../src/Updates.cs" Link="Core/Updates.cs" />
     <Compile Include="../src/AppUpdates.cs" Link="Core/AppUpdates.cs" />
@@ -37,4 +38,3 @@
     <EmbeddedResource Include="../src/payload.lock" LogicalName="payload.lock" />
   </ItemGroup>
 </Project>
-

@@ -52,6 +52,27 @@
          <StackPanel Spacing="10" Margin="16,18"><TextBlock x:Name="ExeLabel" Foreground="#BBBBBB"/><ComboBox x:Name="ExeCombo" HorizontalAlignment="Stretch" SelectionChanged="ExeChanged"/></StackPanel>
          <Border BorderBrush="#2B2B2B" BorderThickness="0,1,0,1" Padding="16,16"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="ProxyLabel" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="ProxyCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid></Border>
          <Border BorderBrush="#2B2B2B" BorderThickness="0,0,0,1" Padding="16,20"><Grid ColumnSpacing="18" HorizontalAlignment="Stretch"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Spacing="7"><TextBlock x:Name="MfgLabel" FontSize="15"/><TextBlock x:Name="MfgDescription" TextWrapping="Wrap" Foreground="#AAAAAA" FontSize="12"/></StackPanel><ToggleSwitch x:Name="MfgSwitch" Grid.Column="1" MinWidth="44" Width="72" OnContent="" OffContent="" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-12,0" Toggled="MfgToggled"/></Grid></Border>
+         <TextBlock x:Name="IniTitle" FontSize="17" FontWeight="SemiBold" Margin="16,24,16,12"/>
+         <StackPanel Margin="16,0,16,12" Spacing="12">
+          <TextBlock x:Name="IniOptimizedLabel"/>
+          <ComboBox x:Name="IniOptimizedCombo" HorizontalAlignment="Stretch"/>
+          <TextBlock x:Name="IniQualityHint" TextWrapping="Wrap" Foreground="#AAAAAA" FontSize="12"/>
+          <TextBlock x:Name="IniFramesLabel"/>
+          <ComboBox x:Name="IniFramesCombo" HorizontalAlignment="Stretch"/>
+          <TextBlock x:Name="IniFramesHint" TextWrapping="Wrap" Foreground="#AAAAAA" FontSize="12"/>
+          <Expander x:Name="IniAdvanced" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+           <StackPanel Spacing="12">
+            <TextBlock x:Name="IniPresetLabel"/>
+            <ComboBox x:Name="IniPresetCombo" HorizontalAlignment="Stretch"/>
+            <TextBlock x:Name="IniPresetHint" TextWrapping="Wrap" Foreground="#AAAAAA" FontSize="12"/>
+            <TextBlock x:Name="IniLoggingLabel"/>
+            <ComboBox x:Name="IniLoggingCombo" HorizontalAlignment="Stretch"/>
+           </StackPanel>
+          </Expander>
+          <TextBlock x:Name="IniHelp" TextWrapping="Wrap" Foreground="#AAAAAA" FontSize="12"/>
+          <StackPanel Orientation="Horizontal" Spacing="12"><Button x:Name="IniSaveButton" Click="IniSaveClick"/><Button x:Name="IniDefaultsButton" Click="IniDefaultsClick"/></StackPanel>
+          <TextBlock x:Name="IniState" TextWrapping="Wrap" Foreground="#B8B8B8" FontSize="12"/>
+         </StackPanel>
          <TextBlock x:Name="StateText" Margin="16,20" TextWrapping="Wrap" Foreground="#B8B8B8"/>
          <StackPanel Orientation="Horizontal" Spacing="8"><Button x:Name="FolderButton" Style="{StaticResource TextAction}" Click="FolderClick"/><Button x:Name="DetailsButton" Style="{StaticResource TextAction}" Click="DetailsClick"/></StackPanel>
         </StackPanel>

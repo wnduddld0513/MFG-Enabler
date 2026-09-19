@@ -110,7 +110,7 @@ namespace MfgEnabler {
   }
   static HttpWebRequest Request(string url) {
    ServicePointManager.SecurityProtocol=SecurityProtocolType.Tls12;
-   var r=(HttpWebRequest)WebRequest.Create(url);r.UserAgent="MFG-Enabler/1.2b1";r.Timeout=30000;r.ReadWriteTimeout=30000;return r;
+   var r=(HttpWebRequest)WebRequest.Create(url);r.UserAgent="MFG-Enabler/1.2b2";r.Timeout=30000;r.ReadWriteTimeout=30000;return r;
   }
   static void DownloadTo(string url,Stream output,long max) {
    using(var response=(HttpWebResponse)Request(url).GetResponse())using(var input=response.GetResponseStream()) {
