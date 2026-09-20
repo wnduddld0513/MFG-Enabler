@@ -17,8 +17,8 @@
     <ApplicationManifest>../src/app.manifest</ApplicationManifest>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <Version>1.3.0</Version>
-    <AppReleaseVersion Condition="'$(AppReleaseVersion)' == ''">1.3</AppReleaseVersion>
+    <Version>1.4.0</Version>
+    <AppReleaseVersion Condition="'$(AppReleaseVersion)' == ''">1.4b2</AppReleaseVersion>
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <InformationalVersion>$(AppReleaseVersion)</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>

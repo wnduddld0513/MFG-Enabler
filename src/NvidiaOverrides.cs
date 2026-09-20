@@ -29,10 +29,9 @@ public sealed class NvidiaOverridePolicy
     [DataMember] public uint? FixedFrameCount;
     [DataMember] public uint? DynamicFrameCount;
     [DataMember] public uint? DynamicTargetFps;
-    [DataMember] public uint? SmoothMotion;
 
     public bool IsEmpty => FgPreset == null && SrPreset == null && RrPreset == null && FgMode == null &&
-        FixedFrameCount == null && DynamicFrameCount == null && DynamicTargetFps == null && SmoothMotion == null;
+        FixedFrameCount == null && DynamicFrameCount == null && DynamicTargetFps == null;
 
     public void Validate()
     {
@@ -40,7 +39,7 @@ public sealed class NvidiaOverridePolicy
             || !NvidiaOverrides.IsPresetValue(NvidiaDlssPresetKind.SuperResolution, SrPreset)
             || !NvidiaOverrides.IsPresetValue(NvidiaDlssPresetKind.RayReconstruction, RrPreset)
             || FgMode.HasValue && FgMode is not (0 or 2 or 4)
-            || FixedFrameCount > 5 || DynamicFrameCount > 5 || SmoothMotion > 1
+            || FixedFrameCount > 5 || DynamicFrameCount > 5
             || DynamicTargetFps.HasValue && DynamicTargetFps != 0x01000000 && DynamicTargetFps is not (>= 60 and <= 500))
             throw new IOException("Invalid NVIDIA override value.");
     }
@@ -102,9 +101,9 @@ public static class NvidiaOverrides
 
     public const uint FgPresetId = 0x10E41DF1, SrPresetId = 0x10E41DF3, RrPresetId = 0x10E41DF7;
     public const uint FgModeId = 0x10308298, FixedFrameCountId = 0x104D6667;
-    public const uint DynamicTargetFpsId = 0x10CF4125, DynamicFrameCountId = 0x10562D0F, SmoothMotionId = 0xB0D384C0;
+    public const uint DynamicTargetFpsId = 0x10CF4125, DynamicFrameCountId = 0x10562D0F;
     public const uint FgOverrideId = 0x10E41E03, SrOverrideId = 0x10E41E01, RrOverrideId = 0x10E41E02;
-    static readonly uint[] ManagedIds = { FgPresetId, SrPresetId, RrPresetId, FgModeId, FixedFrameCountId, DynamicFrameCountId, DynamicTargetFpsId, SmoothMotionId, FgOverrideId, SrOverrideId, RrOverrideId };
+    static readonly uint[] ManagedIds = { FgPresetId, SrPresetId, RrPresetId, FgModeId, FixedFrameCountId, DynamicFrameCountId, DynamicTargetFpsId, FgOverrideId, SrOverrideId, RrOverrideId };
 
     public static bool IsAccessDenied(Exception error) => error is NVIDIAApiException nv && nv.Status == Status.AccessDenied;
 
@@ -179,7 +178,6 @@ public static class NvidiaOverrides
             [FgModeId] = p.FgMode, [FixedFrameCountId] = p.FgMode == 4 ? 0u : p.FixedFrameCount,
             [DynamicFrameCountId] = p.FgMode == 4 ? p.DynamicFrameCount : null,
             [DynamicTargetFpsId] = p.FgMode == 4 ? p.DynamicTargetFps : null,
-            [SmoothMotionId] = p.SmoothMotion
         };
     }
     static void ApplyPolicy(DriverSettingsProfile profile, NvidiaOverridePolicy p)
@@ -187,7 +185,13 @@ public static class NvidiaOverrides
 
     static void SetOrDelete(DriverSettingsProfile profile, uint id, uint? value)
     {
-        if (value.HasValue) profile.SetSetting(id, value.Value); else DeleteSetting(profile, id);
+        if (!value.HasValue)
+        {
+            DeleteSetting(profile, id);
+            return;
+        }
+
+        profile.SetSetting(id, value.Value);
     }
 
     static void DeleteManaged(DriverSettingsProfile profile) { foreach (uint id in ManagedIds) DeleteSetting(profile, id); }

@@ -38,7 +38,6 @@ public sealed partial class MainWindow
         TextBlock fixedCount = global ? GlobalFixedCountLabel : ProgramFixedCountLabel;
         TextBlock dynamicCount = global ? GlobalDynamicCountLabel : ProgramDynamicCountLabel;
         TextBlock target = global ? GlobalDynamicTargetLabel : ProgramDynamicTargetLabel;
-        TextBlock smooth = global ? GlobalSmoothMotionLabel : ProgramSmoothMotionLabel;
         fg.Text = L("Frame Generation preset", "Frame Generation 프리셋");
         sr.Text = L("DLSS Super Resolution preset", "DLSS Super Resolution 프리셋");
         rr.Text = L("DLSS Ray Reconstruction preset", "DLSS Ray Reconstruction 프리셋");
@@ -46,7 +45,6 @@ public sealed partial class MainWindow
         fixedCount.Text = L("Fixed MFG multiplier", "고정 MFG 배수");
         dynamicCount.Text = L("Dynamic MFG maximum multiplier", "동적 MFG 최대 배수");
         target.Text = L("Dynamic target FPS", "동적 목표 FPS");
-        smooth.Text = L("Smooth Motion", "Smooth Motion");
         if (global)
         {
             GlobalNvidiaApply.Content = L("Apply NVIDIA settings", "NVIDIA 설정 적용");
@@ -69,7 +67,6 @@ public sealed partial class MainWindow
         ComboBox fixedCount = global ? GlobalFixedCountCombo : ProgramFixedCountCombo;
         ComboBox dynamicCount = global ? GlobalDynamicCountCombo : ProgramDynamicCountCombo;
         ComboBox target = global ? GlobalDynamicTargetCombo : ProgramDynamicTargetCombo;
-        ComboBox smooth = global ? GlobalSmoothMotionCombo : ProgramSmoothMotionCombo;
 
         fg.ItemsSource = PresetChoices(first, NvidiaDlssPresetKind.FrameGeneration);
         sr.ItemsSource = PresetChoices(first, NvidiaDlssPresetKind.SuperResolution);
@@ -80,7 +77,6 @@ public sealed partial class MainWindow
         var targets = new List<string> { first, L("Max refresh rate", "최대 주사율") };
         targets.AddRange(Enumerable.Range(60, 441).Select(x => x + " FPS"));
         target.ItemsSource = targets;
-        smooth.ItemsSource = new[] { first, L("Off", "끄기"), L("On", "켜기") };
     }
 
     string[] PresetChoices(string first, NvidiaDlssPresetKind kind)
@@ -120,8 +116,6 @@ public sealed partial class MainWindow
     static int ModeIndex(uint? value) => value switch { 0u => 1, 2u => 2, 4u => 3, _ => 0 };
     static uint? CountValue(ComboBox combo) => combo.SelectedIndex <= 0 ? null : (uint)(combo.SelectedIndex - 1);
     static int CountIndex(uint? value) => value is <= 5u ? (int)value.Value + 1 : 0;
-    static uint? SmoothValue(ComboBox combo) => combo.SelectedIndex switch { 1 => 0u, 2 => 1u, _ => null };
-    static int SmoothIndex(uint? value) => value switch { 0u => 1, 1u => 2, _ => 0 };
     static uint? TargetValue(ComboBox combo) => combo.SelectedIndex switch
     {
         <= 0 => null,
@@ -146,7 +140,6 @@ public sealed partial class MainWindow
             FixedFrameCount = CountValue(global ? GlobalFixedCountCombo : ProgramFixedCountCombo),
             DynamicFrameCount = CountValue(global ? GlobalDynamicCountCombo : ProgramDynamicCountCombo),
             DynamicTargetFps = TargetValue(global ? GlobalDynamicTargetCombo : ProgramDynamicTargetCombo),
-            SmoothMotion = SmoothValue(global ? GlobalSmoothMotionCombo : ProgramSmoothMotionCombo)
         };
     }
 
@@ -160,7 +153,6 @@ public sealed partial class MainWindow
         (global ? GlobalFixedCountCombo : ProgramFixedCountCombo).SelectedIndex = CountIndex(p.FixedFrameCount);
         (global ? GlobalDynamicCountCombo : ProgramDynamicCountCombo).SelectedIndex = CountIndex(p.DynamicFrameCount);
         (global ? GlobalDynamicTargetCombo : ProgramDynamicTargetCombo).SelectedIndex = TargetIndex(p.DynamicTargetFps);
-        (global ? GlobalSmoothMotionCombo : ProgramSmoothMotionCombo).SelectedIndex = SmoothIndex(p.SmoothMotion);
         UpdateNvidiaModeAvailability(global);
     }
 
@@ -221,14 +213,14 @@ public sealed partial class MainWindow
 
     void SetProgramNvidiaEnabled(bool value)
     {
-        foreach (var c in new[] { ProgramFgPresetCombo, ProgramSrPresetCombo, ProgramRrPresetCombo, ProgramFgModeCombo, ProgramFixedCountCombo, ProgramDynamicCountCombo, ProgramDynamicTargetCombo, ProgramSmoothMotionCombo }) c.IsEnabled = value;
+        foreach (var c in new[] { ProgramFgPresetCombo, ProgramSrPresetCombo, ProgramRrPresetCombo, ProgramFgModeCombo, ProgramFixedCountCombo, ProgramDynamicCountCombo, ProgramDynamicTargetCombo }) c.IsEnabled = value;
         ProgramNvidiaApply.IsEnabled = ProgramNvidiaRestore.IsEnabled = value;
         UpdateNvidiaModeAvailability(false);
     }
 
     void SetGlobalNvidiaEnabled(bool value)
     {
-        foreach (var c in new[] { GlobalFgPresetCombo, GlobalSrPresetCombo, GlobalRrPresetCombo, GlobalFgModeCombo, GlobalFixedCountCombo, GlobalDynamicCountCombo, GlobalDynamicTargetCombo, GlobalSmoothMotionCombo }) c.IsEnabled = value;
+        foreach (var c in new[] { GlobalFgPresetCombo, GlobalSrPresetCombo, GlobalRrPresetCombo, GlobalFgModeCombo, GlobalFixedCountCombo, GlobalDynamicCountCombo, GlobalDynamicTargetCombo }) c.IsEnabled = value;
         GlobalNvidiaApply.IsEnabled = GlobalNvidiaRestore.IsEnabled = value;
         UpdateNvidiaModeAvailability(true);
     }

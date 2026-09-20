@@ -50,25 +50,25 @@
          <TextBlock x:Name="GamePath" Foreground="#AAAAAA" FontSize="12" TextWrapping="Wrap" IsTextSelectionEnabled="True" Margin="0,0,0,24"/>
          <Grid Background="#232323" Padding="16,8"><TextBlock x:Name="DriverTitle" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/><Button x:Name="RestoreButton" Click="RestoreClick" Style="{StaticResource TextAction}" HorizontalAlignment="Right"/></Grid>
          <StackPanel Spacing="10" Margin="16,18"><TextBlock x:Name="ExeLabel" Foreground="#BBBBBB"/><ComboBox x:Name="ExeCombo" HorizontalAlignment="Stretch" SelectionChanged="ExeChanged"/></StackPanel>
-         <Border BorderBrush="#2B2B2B" BorderThickness="0,1,0,1" Padding="16,16"><Grid ColumnSpacing="10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="ProxyLabel" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="ProxyCombo" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="ProxyChanged"/><Button x:Name="ProxyDetectButton" Grid.Column="2" Click="ProxyDetectClick" Style="{StaticResource SettingsAction}"/></Grid></Border>
+         <Border BorderBrush="#2B2B2B" BorderThickness="0,1,0,1" Padding="16,16"><Grid ColumnSpacing="10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="160"/><ColumnDefinition Width="160"/></Grid.ColumnDefinitions><TextBlock x:Name="ProxyLabel" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="ProxyCombo" Grid.Column="1" Width="160" HorizontalAlignment="Stretch" SelectionChanged="ProxyChanged"/><Button x:Name="ProxyDetectButton" Grid.Column="2" Width="160" HorizontalAlignment="Stretch" Click="ProxyDetectClick"/></Grid></Border>
          <Border BorderBrush="#2B2B2B" BorderThickness="0,0,0,1" Padding="16,20"><Grid ColumnSpacing="18" HorizontalAlignment="Stretch"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Spacing="7"><TextBlock x:Name="MfgLabel" FontSize="15"/><TextBlock x:Name="MfgDescription" TextWrapping="Wrap" Foreground="#AAAAAA" FontSize="12"/></StackPanel><ToggleSwitch x:Name="MfgSwitch" Grid.Column="1" MinWidth="44" Width="72" OnContent="" OffContent="" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-12,0" Toggled="MfgToggled"/></Grid></Border>
          <TextBlock x:Name="IniTitle" FontSize="17" FontWeight="SemiBold" Margin="0,28,0,8"/>
          <Border BorderBrush="#303030" BorderThickness="0,0,0,1" Padding="16,20">
           <StackPanel Spacing="16">
-           <Grid ColumnSpacing="16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="260"/></Grid.ColumnDefinitions><TextBlock x:Name="IniOptimizedLabel" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="IniOptimizedCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+           <Grid ColumnSpacing="16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="IniOptimizedLabel" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="IniOptimizedCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
            <TextBlock x:Name="IniQualityHint" Foreground="#AAAAAA" TextWrapping="Wrap"/>
-           <Grid ColumnSpacing="16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="260"/></Grid.ColumnDefinitions><TextBlock x:Name="IniFramesLabel" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="IniFramesCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+           <Grid ColumnSpacing="16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="IniFramesLabel" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="IniFramesCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
            <TextBlock x:Name="IniFramesHint" Foreground="#AAAAAA" TextWrapping="Wrap"/>
            <Expander x:Name="IniAdvanced" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
             <StackPanel Spacing="16">
-             <Grid ColumnSpacing="16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="240"/></Grid.ColumnDefinitions><TextBlock x:Name="IniPresetLabel" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="IniPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+             <Grid ColumnSpacing="16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="IniPresetLabel" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="IniPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
              <TextBlock x:Name="IniPresetHint" Foreground="#AAAAAA" TextWrapping="Wrap"/>
-             <Grid ColumnSpacing="16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="240"/></Grid.ColumnDefinitions><TextBlock x:Name="IniLoggingLabel" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="IniLoggingCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+             <Grid ColumnSpacing="16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="IniLoggingLabel" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="IniLoggingCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
             </StackPanel>
            </Expander>
            <TextBlock x:Name="IniHelp" Foreground="#AAAAAA" TextWrapping="Wrap"/>
            <TextBlock x:Name="IniState" TextWrapping="Wrap"/>
-           <StackPanel Orientation="Horizontal" Spacing="8"><Button x:Name="IniSaveButton" Style="{StaticResource SettingsAction}" Click="IniSaveClick"/><Button x:Name="IniDefaultsButton" Click="IniDefaultsClick" Style="{StaticResource SettingsAction}"/></StackPanel>
+           <StackPanel Orientation="Horizontal" Spacing="8"><Button x:Name="IniSaveButton" Click="IniSaveClick"/><Button x:Name="IniDefaultsButton" Click="IniDefaultsClick"/></StackPanel>
           </StackPanel>
          </Border>
          <TextBlock x:Name="ProgramNvidiaTitle" FontSize="17" FontWeight="SemiBold" Margin="0,28,0,8"/>
@@ -78,23 +78,22 @@
            <Expander x:Name="ProgramDlssExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="False">
             <Expander.Header><TextBlock x:Name="ProgramDlssSectionTitle" FontSize="14" FontWeight="SemiBold"/></Expander.Header>
             <StackPanel Spacing="10" Margin="0,8,0,4">
-             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramFgPresetLabel" FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="ProgramFgPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
-             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramSrPresetLabel" FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="ProgramSrPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
-             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramRrPresetLabel" FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="ProgramRrPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramFgPresetLabel" FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="ProgramFgPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramSrPresetLabel" FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="ProgramSrPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramRrPresetLabel" FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap"/><ComboBox x:Name="ProgramRrPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
             </StackPanel>
            </Expander>
            <Expander x:Name="ProgramMfgExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="False">
             <Expander.Header><TextBlock x:Name="ProgramMfgSectionTitle" FontSize="14" FontWeight="SemiBold"/></Expander.Header>
             <StackPanel Spacing="10" Margin="0,8,0,4">
-             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramFgModeLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="ProgramFgModeCombo" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="NvidiaModeChanged"/></Grid>
-             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramFixedCountLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="ProgramFixedCountCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
-             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramDynamicCountLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="ProgramDynamicCountCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
-             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramDynamicTargetLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="ProgramDynamicTargetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
-             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramSmoothMotionLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="ProgramSmoothMotionCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramFgModeLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="ProgramFgModeCombo" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="NvidiaModeChanged"/></Grid>
+             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramFixedCountLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="ProgramFixedCountCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramDynamicCountLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="ProgramDynamicCountCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+             <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="ProgramDynamicTargetLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="ProgramDynamicTargetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
             </StackPanel>
            </Expander>
            <TextBlock x:Name="ProgramNvidiaState" Foreground="#AAAAAA" FontSize="12" TextWrapping="Wrap"/>
-           <StackPanel Orientation="Horizontal" Spacing="8"><Button x:Name="ProgramNvidiaApply" Click="ProgramNvidiaApplyClick" Style="{StaticResource SettingsAction}"/><Button x:Name="ProgramNvidiaRestore" Click="ProgramNvidiaRestoreClick" Style="{StaticResource SettingsAction}"/></StackPanel>
+           <StackPanel Orientation="Horizontal" Spacing="8"><Button x:Name="ProgramNvidiaApply" Click="ProgramNvidiaApplyClick"/><Button x:Name="ProgramNvidiaRestore" Click="ProgramNvidiaRestoreClick"/></StackPanel>
           </StackPanel>
          </Border>
          <TextBlock x:Name="StateText" Margin="16,20" TextWrapping="Wrap" Foreground="#B8B8B8"/>
@@ -108,7 +107,7 @@
        <TextBlock x:Name="GlobalTitle" FontSize="20" FontWeight="SemiBold"/>
        <TextBlock x:Name="GlobalDescription" TextWrapping="Wrap" Foreground="#AAAAAA"/>
        <ToggleSwitch x:Name="GlobalSwitch" HorizontalAlignment="Left" Toggled="GlobalToggled"/>
-       <Button x:Name="GlobalConfigure" Click="GlobalConfigureClick"/>
+       <Button x:Name="GlobalConfigure" Click="GlobalConfigureClick" HorizontalAlignment="Left"/>
        <TextBlock x:Name="GlobalStatus" TextWrapping="Wrap"/>
        <TextBlock x:Name="GlobalNvidiaTitle" FontSize="20" FontWeight="SemiBold" Margin="0,16,0,0"/>
        <Border BorderBrush="#303030" BorderThickness="0,1,0,1" Padding="16,14">
@@ -117,23 +116,22 @@
          <Expander x:Name="GlobalDlssExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="False">
           <Expander.Header><TextBlock x:Name="GlobalDlssSectionTitle" FontSize="14" FontWeight="SemiBold"/></Expander.Header>
           <StackPanel Spacing="10" Margin="0,8,0,4">
-           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalFgPresetLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalFgPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
-           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalSrPresetLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalSrPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
-           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalRrPresetLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalRrPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalFgPresetLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalFgPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalSrPresetLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalSrPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalRrPresetLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalRrPresetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
           </StackPanel>
          </Expander>
          <Expander x:Name="GlobalMfgExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" IsExpanded="False">
           <Expander.Header><TextBlock x:Name="GlobalMfgSectionTitle" FontSize="14" FontWeight="SemiBold"/></Expander.Header>
           <StackPanel Spacing="10" Margin="0,8,0,4">
-           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalFgModeLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalFgModeCombo" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="NvidiaModeChanged"/></Grid>
-           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalFixedCountLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalFixedCountCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
-           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalDynamicCountLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalDynamicCountCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
-           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalDynamicTargetLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalDynamicTargetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
-           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalSmoothMotionLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalSmoothMotionCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalFgModeLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalFgModeCombo" Grid.Column="1" HorizontalAlignment="Stretch" SelectionChanged="NvidiaModeChanged"/></Grid>
+           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalFixedCountLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalFixedCountCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalDynamicCountLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalDynamicCountCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+           <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions><TextBlock x:Name="GlobalDynamicTargetLabel" FontSize="13" VerticalAlignment="Center"/><ComboBox x:Name="GlobalDynamicTargetCombo" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
           </StackPanel>
          </Expander>
          <TextBlock x:Name="GlobalNvidiaState" Foreground="#AAAAAA" FontSize="12" TextWrapping="Wrap"/>
-         <StackPanel Orientation="Horizontal" Spacing="8"><Button x:Name="GlobalNvidiaApply" Click="GlobalNvidiaApplyClick" Style="{StaticResource SettingsAction}"/><Button x:Name="GlobalNvidiaRestore" Click="GlobalNvidiaRestoreClick" Style="{StaticResource SettingsAction}"/></StackPanel>
+         <StackPanel Orientation="Horizontal" Spacing="8"><Button x:Name="GlobalNvidiaApply" Click="GlobalNvidiaApplyClick"/><Button x:Name="GlobalNvidiaRestore" Click="GlobalNvidiaRestoreClick"/></StackPanel>
         </StackPanel>
        </Border>
       </StackPanel>
@@ -154,7 +152,7 @@
         </StackPanel>
        </Border>
        <Border BorderBrush="#303030" BorderThickness="0,0,0,1" Padding="16,20"><Grid ColumnSpacing="24" HorizontalAlignment="Stretch"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions><StackPanel Spacing="8"><TextBlock x:Name="AutoLabel"/><TextBlock x:Name="AutoDescription" Foreground="#AAAAAA" TextWrapping="Wrap"/></StackPanel><ToggleSwitch x:Name="AutoSwitch" Grid.Column="1" MinWidth="44" Width="72" OnContent="" OffContent="" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,-12,0" Toggled="AutoToggled"/></Grid></Border>
-       <Button x:Name="RuntimeNotesButton" Style="{StaticResource SettingsAction}" Click="RuntimeNotesClick" Width="280" HorizontalAlignment="Left" Margin="16,12,0,0"/>
+       <Button x:Name="RuntimeNotesButton" Click="RuntimeNotesClick" HorizontalAlignment="Left" Margin="16,12,0,0"/>
         <TextBlock x:Name="AboutTitle" FontSize="17" FontWeight="SemiBold" Margin="0,28,0,12"/>
         <TextBlock x:Name="AppVersionText" Margin="16,0,0,8"/>
        <TextBlock x:Name="AboutDescription" Foreground="#AAAAAA" TextWrapping="Wrap" Margin="16,0,16,20"/>

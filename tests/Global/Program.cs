@@ -158,7 +158,6 @@ foreach (uint tier in new uint[] { 1, 6, NvidiaOverrides.RecommendedPreset }) ne
 Check(true, "All exposed RR presets validate");
 Reject(() => new NvidiaOverridePolicy { RrPreset = 10 }.Validate(), "Reject SR-only preset for RR");
 Reject(() => new NvidiaOverridePolicy { DynamicTargetFps = 501 }.Validate(), "Reject invalid NVIDIA target FPS");
-Reject(() => new NvidiaOverridePolicy { SmoothMotion = 2 }.Validate(), "Reject invalid Smooth Motion value");
 var values = NvidiaOverrides.SettingsFor(new NvidiaOverridePolicy { FgMode = 4, FixedFrameCount = 5, DynamicFrameCount = 5, DynamicTargetFps = 144, FgPreset = 2 });
 Check(values[NvidiaOverrides.FixedFrameCountId] == 0 && values[NvidiaOverrides.DynamicFrameCountId] == 5 && values[NvidiaOverrides.DynamicTargetFpsId] == 144, "Dynamic mode clears fixed multiplier and writes dynamic values");
 Check(values[NvidiaOverrides.FgOverrideId] == 1 && values[NvidiaOverrides.SrOverrideId] == null, "Enable only the selected preset override");
