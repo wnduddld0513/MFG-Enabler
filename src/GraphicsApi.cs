@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection.PortableExecutable;
+using System.Text;
 
 namespace MfgEnabler;
 
@@ -62,9 +63,62 @@ public static class GraphicsApiDetector
             }
             ReadTable(header.ImportTableDirectory, false);
             ReadTable(header.DelayImportTableDirectory, true);
+            if (!result.HasFlag(GraphicsApi.DirectX12) && HasDynamicDx12Evidence(stream, pe)) result |= GraphicsApi.DirectX12;
             return result;
         }
         catch (Exception error) when (error is IOException || error is BadImageFormatException || error is UnauthorizedAccessException || error is ArgumentException)
         { return GraphicsApi.Unknown; }
+    }
+
+    // Some engines resolve D3D12 exports with LoadLibrary/GetProcAddress instead of
+    // importing d3d12.dll. Require CreateDevice plus another D3D12 runtime export so
+    // incidental text such as a command-line option cannot classify a game as DX12.
+    static bool HasDynamicDx12Evidence(Stream stream, PEReader pe)
+    {
+        byte[][] patterns =
+        {
+            Encoding.ASCII.GetBytes("D3D12CreateDevice"),
+            Encoding.ASCII.GetBytes("D3D12GetDebugInterface"),
+            Encoding.ASCII.GetBytes("D3D12SerializeRootSignature"),
+            Encoding.ASCII.GetBytes("D3D12SerializeVersionedRootSignature")
+        };
+        bool[] found = new bool[patterns.Length];
+        byte[] buffer = new byte[64 * 1024];
+        int overlap = patterns.Max(x => x.Length) - 1;
+
+        foreach (var section in pe.PEHeaders.SectionHeaders)
+        {
+            if (section.SizeOfRawData <= 0 || (section.SectionCharacteristics & SectionCharacteristics.ContainsInitializedData) == 0) continue;
+            long start = section.PointerToRawData;
+            long end = Math.Min(stream.Length, start + section.SizeOfRawData);
+            if (start < 0 || start >= end) continue;
+
+            stream.Position = start;
+            int kept = 0;
+            while (stream.Position < end)
+            {
+                int read = stream.Read(buffer, kept, (int)Math.Min(buffer.Length - kept, end - stream.Position));
+                if (read <= 0) break;
+                int length = kept + read;
+                for (int p = 0; p < patterns.Length; p++)
+                    if (!found[p] && Contains(buffer, length, patterns[p])) found[p] = true;
+                if (found[0] && (found[1] || found[2] || found[3])) return true;
+
+                kept = Math.Min(overlap, length);
+                Buffer.BlockCopy(buffer, length - kept, buffer, 0, kept);
+            }
+        }
+        return false;
+    }
+
+    static bool Contains(byte[] buffer, int length, byte[] pattern)
+    {
+        for (int i = 0; i <= length - pattern.Length; i++)
+        {
+            int j = 0;
+            while (j < pattern.Length && buffer[i + j] == pattern[j]) j++;
+            if (j == pattern.Length) return true;
+        }
+        return false;
     }
 }
