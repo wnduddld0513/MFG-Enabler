@@ -1,7 +1,8 @@
 # MFG-Enabler
 
-<img width="1940" height="1354" alt="ui2" src="https://github.com/user-attachments/assets/2f6db7c1-3b62-4e9a-b74f-a55a6a1746d2" />
-<img width="1940" height="1354" alt="ui1" src="https://github.com/user-attachments/assets/a85754a4-f826-4e03-8b8d-678f7e9ea007" />
+<img width="1940" height="1354" alt="program" src="https://github.com/user-attachments/assets/fd5b9764-4b58-4d71-9d25-a379e89c1669" />
+<img width="1934" height="1354" alt="global" src="https://github.com/user-attachments/assets/80d200b0-8c86-4486-bafc-de185f52bb5e" />
+
 
 MFG-Enabler is a Windows tool for enabling Multi Frame Generation (MFG) on GeForce RTX 20, 30, and 40 series GPUs in supported games.
 
@@ -118,8 +119,6 @@ The global test's optional `--live-driver` argument writes and reads a uniquely 
 ## Credits and license
 
 [sdli1995/dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_sm86) supplies the runtime, downloaded separately.
-
-[wnduddld0513](https://github.com/wnduddld0513) maintains MFG-Enabler. **OpenAI Codex** contributed implementation, debugging, regression tests, documentation, and release preparation for 1.3; see [contributors](CONTRIBUTORS.md).
 
 [NvAPIWrapper](https://github.com/falahati/NvAPIWrapper) by Soroush Falahati supplies NVIDIA API bindings under LGPLv3; its [license](docs/NvAPIWrapper-LICENSE.txt) is included with the application.
 
