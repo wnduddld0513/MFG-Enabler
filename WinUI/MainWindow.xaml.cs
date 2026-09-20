@@ -201,6 +201,7 @@ public sealed partial class MainWindow : Window
         DriverTitle.Text = L("Program settings", "프로그램 설정"); RestoreButton.Content = L("Restore", "복구");
         ExeLabel.Text = L("Detected executable · choose the rendering EXE", "감지된 실행 파일 · 렌더링 EXE 선택");
         ProxyLabel.Text = L("Installation proxy", "설치 프록시");
+        ProxyDetectButton.Content = L("Find recommended", "추천 프록시 찾기");
         MfgLabel.Text = L("Enable MFG", "MFG 활성화");
         MfgDescription.Text = L("Installs dlssg_for_sm86.", "dlssg_for_sm86을 설치합니다.");
         FolderButton.Content = L("Open game folder", "게임 폴더 열기");
@@ -309,20 +310,36 @@ public sealed partial class MainWindow : Window
         try
         {
             bool available = Selected != null && ExeCombo.SelectedItem != null;
-            string status = available ? CurrentTarget().Status() : "미적용";
+            var target = available ? CurrentTarget() : null;
+            string status = available ? target.Status() : "미적용";
             string spoof = available ? new Installer(CurrentTarget().Target, true).Status() : "미적용";
             bool eligible = Selected?.CanEnable == true;
+            if (available)
+            {
+                Journal journal = target.Load();
+                string installedProxy = journal != null && journal.Phase == "enabled" ? journal.Proxy : null;
+                if (!String.IsNullOrEmpty(installedProxy) && Payload.Proxies.Contains(installedProxy))
+                    ProxyCombo.SelectedItem = installedProxy;
+                else if (status == "미적용")
+                {
+                    var recommendation = ProxyRecommendations.Get(Selected);
+                    if (!String.IsNullOrEmpty(recommendation?.Proxy) && Payload.Proxies.Contains(recommendation.Proxy))
+                        ProxyCombo.SelectedItem = recommendation.Proxy;
+                    else if (ProxyCombo.SelectedItem == null) ProxyCombo.SelectedIndex = 0;
+                }
+            }
             MfgSwitch.IsOn = status == "적용됨";
             MfgSwitch.IsEnabled = !busy && available && (status == "적용됨" || status == "미적용" && eligible);
             RestoreButton.IsEnabled = !busy && available && Installer.HasAny(CurrentTarget().Target);
-            ProxyCombo.IsEnabled = !busy && available && status == "미적용" && eligible;
+            ProxyCombo.IsEnabled = !busy && available && eligible && (status == "미적용" || status == "적용됨");
+            ProxyDetectButton.IsEnabled = !busy && available && eligible && (status == "미적용" || status == "적용됨");
             FolderButton.IsEnabled = available;
             string ineligibleNote = eligible ? "" : "\n" + (String.IsNullOrEmpty(Selected?.Evidence) ? L("Recovery only. This program is no longer an eligible detected candidate.", "복구 전용 · 현재 감지된 적용 후보가 아닙니다.") : LocalizeCore(Selected.Evidence));
             StateText.Text = available ? "MFG: " + StatusLabel(status) + ineligibleNote :
                 (!eligible && !String.IsNullOrEmpty(Selected?.Evidence) ? LocalizeCore(Selected.Evidence) :
                 L("Choose the rendering executable recorded by NVIDIA App.", "NVIDIA App이 기록한 렌더링 실행 파일을 선택하세요."));
         }
-        catch (Exception error) { MfgSwitch.IsEnabled = RestoreButton.IsEnabled = ProxyCombo.IsEnabled = false; StateText.Text = L("Cannot read this target. ", "대상 확인 실패. ") + error.Message; }
+        catch (Exception error) { MfgSwitch.IsEnabled = RestoreButton.IsEnabled = ProxyCombo.IsEnabled = ProxyDetectButton.IsEnabled = false; StateText.Text = L("Cannot read this target. ", "대상 확인 실패. ") + error.Message; }
         finally { loading = previous; RefreshIniEditor(); RefreshNvidiaProgram(); }
     }
     void SetBusy(bool value)
@@ -499,6 +516,56 @@ public sealed partial class MainWindow : Window
         try { await Task.Run(() => Updates.CheckAndApply(known, ProgressText)); }
         catch { }
         finally { SetBusy(false); }
+    }
+    async void ProxyChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (loading || busy || Selected == null || ProxyCombo.SelectedItem is not string proxy) return;
+        try
+        {
+            var target = CurrentTarget();
+            if (target.Status() != "적용됨") return;
+            Journal journal = target.Load();
+            if (journal == null || String.Equals(journal.Proxy, proxy, StringComparison.OrdinalIgnoreCase)) return;
+            var game = Selected;
+            string exe = (string)ExeCombo.SelectedItem;
+            await Run(() =>
+            {
+                Installer.RestoreAll(target.Target);
+                Discovery.ValidateForEnable(game, exe);
+                Payload.Ensure(proxy, ProgressText);
+                Discovery.ValidateForEnable(game, exe);
+                target.Enable(proxy, Payload.Cache);
+            });
+        }
+        catch (Exception error) { UpdateState(); await ShowError(error.Message); }
+    }
+    async void ProxyDetectClick(object sender, RoutedEventArgs e)
+    {
+        if (loading || busy || Selected == null) return;
+        try
+        {
+            var game = Selected;
+            var target = CurrentTarget();
+            string owned = null;
+            Journal journal = target.Load();
+            if (journal != null && journal.Phase == "enabled") owned = journal.Proxy;
+            ProxyRecommendationRecord recommendation = null;
+            await Run(() => recommendation = ProxyRecommendations.DetectAndStore(game, true, owned));
+            if (!String.IsNullOrEmpty(recommendation?.Proxy))
+            {
+                if (target.Status() == "미적용")
+                {
+                    bool previousLoading = loading; loading = true;
+                    ProxyCombo.SelectedItem = recommendation.Proxy;
+                    loading = previousLoading;
+                }
+                StateText.Text = L("Recommended proxy: ", "추천 프록시: ") + recommendation.Proxy;
+            }
+            else StateText.Text = recommendation?.Result?.StartsWith("ambiguous:") == true
+                ? L("Proxy recommendation is ambiguous: ", "추천 프록시가 동률입니다: ") + recommendation.Result.Substring("ambiguous:".Length)
+                : L("No suitable proxy DLL was detected.", "적합한 프록시 DLL을 찾지 못했습니다.");
+        }
+        catch (Exception error) { UpdateState(); await ShowError(error.Message); }
     }
     async void RuntimeNotesClick(object sender, RoutedEventArgs e)
     {
