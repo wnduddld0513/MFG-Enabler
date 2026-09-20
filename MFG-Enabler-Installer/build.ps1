@@ -22,6 +22,6 @@ if (Test-Path -LiteralPath $output) {
     Remove-Item -LiteralPath $output -Recurse -Force
 }
 
-& dotnet build (Join-Path $installerRoot 'MFG-Enabler-Installer.wixproj') -c Release -p:ProductVersion=$Version
+& dotnet build (Join-Path $installerRoot 'MFG-Enabler-Installer.wixproj') -c Release -t:Rebuild -p:ProductVersion=$Version
 if ($LASTEXITCODE -ne 0) { throw 'MSI build failed.' }
 Write-Host "Built MFG-Enabler-Installer\output\MFG-Enabler-Setup-$Version.msi"

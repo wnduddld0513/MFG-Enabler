@@ -10,6 +10,15 @@ using NvAPIWrapper.Native.General;
 
 namespace MfgEnabler;
 
+public enum NvidiaDlssPresetKind
+{
+    FrameGeneration,
+    SuperResolution,
+    RayReconstruction
+}
+
+public readonly record struct NvidiaDlssPresetOption(uint Value, string Label);
+
 [DataContract]
 public sealed class NvidiaOverridePolicy
 {
@@ -27,8 +36,9 @@ public sealed class NvidiaOverridePolicy
 
     public void Validate()
     {
-        static bool Preset(uint? value, uint max, bool fg) => !value.HasValue || value is >= 1 && value <= max || value == 0x00FFFFFF || fg && value == 0x00FFFFFE;
-        if (!Preset(FgPreset, 26, true) || !Preset(SrPreset, 15, false) || !Preset(RrPreset, 15, false)
+        if (!NvidiaOverrides.IsPresetValue(NvidiaDlssPresetKind.FrameGeneration, FgPreset)
+            || !NvidiaOverrides.IsPresetValue(NvidiaDlssPresetKind.SuperResolution, SrPreset)
+            || !NvidiaOverrides.IsPresetValue(NvidiaDlssPresetKind.RayReconstruction, RrPreset)
             || FgMode.HasValue && FgMode is not (0 or 2 or 4)
             || FixedFrameCount > 5 || DynamicFrameCount > 5 || SmoothMotion > 1
             || DynamicTargetFps.HasValue && DynamicTargetFps != 0x01000000 && DynamicTargetFps is not (>= 60 and <= 500))
@@ -38,6 +48,58 @@ public sealed class NvidiaOverridePolicy
 
 public static class NvidiaOverrides
 {
+    public const uint RecommendedFgPreset = 0x00FFFFFE;
+    public const uint RecommendedPreset = 0x00FFFFFF;
+
+    static readonly NvidiaDlssPresetOption[] FgPresets =
+    {
+        new(RecommendedFgPreset, "Recommended"),
+        new(RecommendedPreset, "Latest"),
+        new(1, "A"),
+        new(2, "B")
+    };
+
+    static readonly NvidiaDlssPresetOption[] SrPresets =
+    {
+        new(RecommendedPreset, "Recommended"),
+        new(1, "A"),
+        new(2, "B"),
+        new(3, "C"),
+        new(4, "D"),
+        new(5, "E"),
+        new(6, "F"),
+        new(10, "J"),
+        new(11, "K"),
+        new(12, "L"),
+        new(13, "M")
+    };
+
+    static readonly NvidiaDlssPresetOption[] RrPresets =
+    {
+        new(RecommendedPreset, "Recommended"),
+        new(1, "A"),
+        new(2, "B"),
+        new(3, "C"),
+        new(4, "D"),
+        new(5, "E"),
+        new(6, "F")
+    };
+
+    public static IReadOnlyList<NvidiaDlssPresetOption> PresetOptions(NvidiaDlssPresetKind kind) => kind switch
+    {
+        NvidiaDlssPresetKind.FrameGeneration => FgPresets,
+        NvidiaDlssPresetKind.SuperResolution => SrPresets,
+        NvidiaDlssPresetKind.RayReconstruction => RrPresets,
+        _ => throw new ArgumentOutOfRangeException(nameof(kind))
+    };
+
+    public static bool IsPresetValue(NvidiaDlssPresetKind kind, uint? value)
+    {
+        if (!value.HasValue) return true;
+        foreach (var option in PresetOptions(kind)) if (option.Value == value.Value) return true;
+        return false;
+    }
+
     public const uint FgPresetId = 0x10E41DF1, SrPresetId = 0x10E41DF3, RrPresetId = 0x10E41DF7;
     public const uint FgModeId = 0x10308298, FixedFrameCountId = 0x104D6667;
     public const uint DynamicTargetFpsId = 0x10CF4125, DynamicFrameCountId = 0x10562D0F, SmoothMotionId = 0xB0D384C0;

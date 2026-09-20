@@ -71,9 +71,9 @@ public sealed partial class MainWindow
         ComboBox target = global ? GlobalDynamicTargetCombo : ProgramDynamicTargetCombo;
         ComboBox smooth = global ? GlobalSmoothMotionCombo : ProgramSmoothMotionCombo;
 
-        fg.ItemsSource = PresetChoices(first, true);
-        sr.ItemsSource = PresetChoices(first, false);
-        rr.ItemsSource = PresetChoices(first, false);
+        fg.ItemsSource = PresetChoices(first, NvidiaDlssPresetKind.FrameGeneration);
+        sr.ItemsSource = PresetChoices(first, NvidiaDlssPresetKind.SuperResolution);
+        rr.ItemsSource = PresetChoices(first, NvidiaDlssPresetKind.RayReconstruction);
         mode.ItemsSource = new[] { first, "N/A", L("Fixed", "고정"), L("Dynamic", "동적") };
         fixedCount.ItemsSource = FrameCountChoices(first);
         dynamicCount.ItemsSource = FrameCountChoices(first);
@@ -83,39 +83,36 @@ public sealed partial class MainWindow
         smooth.ItemsSource = new[] { first, L("Off", "끄기"), L("On", "켜기") };
     }
 
-    string[] PresetChoices(string first, bool fg)
+    string[] PresetChoices(string first, NvidiaDlssPresetKind kind)
     {
         var list = new List<string> { first };
-        if (fg) list.Add(L("Recommended", "권장"));
-        list.Add(fg ? L("Latest", "최신") : L("Recommended", "권장"));
-        int count = fg ? 26 : 15;
-        for (int i = 0; i < count; i++) list.Add(((char)('A' + i)).ToString());
+        foreach (var option in NvidiaOverrides.PresetOptions(kind))
+        {
+            list.Add(option.Label switch
+            {
+                "Recommended" => L("Recommended", "권장"),
+                "Latest" => L("Latest", "최신"),
+                _ => option.Label
+            });
+        }
         return list.ToArray();
     }
 
     string[] FrameCountChoices(string first) => new[] { first, "N/A", "2X", "3X", "4X", "5X", "6X" };
 
-    static uint? PresetValue(ComboBox combo, bool fg)
+    static uint? PresetValue(ComboBox combo, NvidiaDlssPresetKind kind)
     {
         int i = combo.SelectedIndex;
         if (i <= 0) return null;
-        if (fg)
-        {
-            if (i == 1) return 0x00FFFFFE;
-            if (i == 2) return 0x00FFFFFF;
-            return (uint)(i - 2);
-        }
-        if (i == 1) return 0x00FFFFFF;
-        return (uint)(i - 1);
+        var options = NvidiaOverrides.PresetOptions(kind);
+        return i <= options.Count ? options[i - 1].Value : null;
     }
 
-    static int PresetIndex(uint? value, bool fg)
+    static int PresetIndex(uint? value, NvidiaDlssPresetKind kind)
     {
         if (!value.HasValue) return 0;
-        if (fg && value == 0x00FFFFFE) return 1;
-        if (value == 0x00FFFFFF) return fg ? 2 : 1;
-        uint max = fg ? 26u : 15u;
-        if (value >= 1 && value <= max) return fg ? (int)value + 2 : (int)value + 1;
+        var options = NvidiaOverrides.PresetOptions(kind);
+        for (int i = 0; i < options.Count; i++) if (options[i].Value == value.Value) return i + 1;
         return 0;
     }
 
@@ -142,9 +139,9 @@ public sealed partial class MainWindow
     {
         return new NvidiaOverridePolicy
         {
-            FgPreset = PresetValue(global ? GlobalFgPresetCombo : ProgramFgPresetCombo, true),
-            SrPreset = PresetValue(global ? GlobalSrPresetCombo : ProgramSrPresetCombo, false),
-            RrPreset = PresetValue(global ? GlobalRrPresetCombo : ProgramRrPresetCombo, false),
+            FgPreset = PresetValue(global ? GlobalFgPresetCombo : ProgramFgPresetCombo, NvidiaDlssPresetKind.FrameGeneration),
+            SrPreset = PresetValue(global ? GlobalSrPresetCombo : ProgramSrPresetCombo, NvidiaDlssPresetKind.SuperResolution),
+            RrPreset = PresetValue(global ? GlobalRrPresetCombo : ProgramRrPresetCombo, NvidiaDlssPresetKind.RayReconstruction),
             FgMode = ModeValue(global ? GlobalFgModeCombo : ProgramFgModeCombo),
             FixedFrameCount = CountValue(global ? GlobalFixedCountCombo : ProgramFixedCountCombo),
             DynamicFrameCount = CountValue(global ? GlobalDynamicCountCombo : ProgramDynamicCountCombo),
@@ -156,9 +153,9 @@ public sealed partial class MainWindow
     void LoadNvidiaPolicy(bool global, NvidiaOverridePolicy p)
     {
         p ??= new NvidiaOverridePolicy();
-        (global ? GlobalFgPresetCombo : ProgramFgPresetCombo).SelectedIndex = PresetIndex(p.FgPreset, true);
-        (global ? GlobalSrPresetCombo : ProgramSrPresetCombo).SelectedIndex = PresetIndex(p.SrPreset, false);
-        (global ? GlobalRrPresetCombo : ProgramRrPresetCombo).SelectedIndex = PresetIndex(p.RrPreset, false);
+        (global ? GlobalFgPresetCombo : ProgramFgPresetCombo).SelectedIndex = PresetIndex(p.FgPreset, NvidiaDlssPresetKind.FrameGeneration);
+        (global ? GlobalSrPresetCombo : ProgramSrPresetCombo).SelectedIndex = PresetIndex(p.SrPreset, NvidiaDlssPresetKind.SuperResolution);
+        (global ? GlobalRrPresetCombo : ProgramRrPresetCombo).SelectedIndex = PresetIndex(p.RrPreset, NvidiaDlssPresetKind.RayReconstruction);
         (global ? GlobalFgModeCombo : ProgramFgModeCombo).SelectedIndex = ModeIndex(p.FgMode);
         (global ? GlobalFixedCountCombo : ProgramFixedCountCombo).SelectedIndex = CountIndex(p.FixedFrameCount);
         (global ? GlobalDynamicCountCombo : ProgramDynamicCountCombo).SelectedIndex = CountIndex(p.DynamicFrameCount);
