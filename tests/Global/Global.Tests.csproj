@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><NoWarn>SYSLIB0014;SYSLIB0021;SYSLIB0045;CA1416</NoWarn></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/*.cs" Link="Core/%(Filename)%(Extension)" />
+    <Compile Include="../../WinUI/LegacyJson.cs" Link="LegacyJson.cs" />
+    <EmbeddedResource Include="../../src/payload.lock" LogicalName="payload.lock" />
+    <PackageReference Include="NvAPIWrapper.Net" Version="0.8.1.101" />
+  </ItemGroup>
+</Project>

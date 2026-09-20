@@ -1,259 +1,619 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Net;
+using System;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
-using System.Web.Script.Serialization;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Web.Script.Serialization;
 
-namespace MfgEnabler {
- [DataContract] public class PackageFile {
-  [DataMember] public string Name;
-  [DataMember] public string Path;
-  [DataMember] public string Hash;
-  [DataMember] public string Blob;
- }
- [DataContract] public class RuntimePackage {
-   [DataMember] public string Revision;
-   [DataMember] public string Version;
-   [DataMember] public string Channel;
-  [DataMember] public List<PackageFile> Files;
- }
- [DataContract] public class AppSettings {
-  [DataMember] public bool AutoUpdate;
- }
- public sealed class UpdateResult {
-  public string Summary;
-  public List<string> Details=new List<string>();
- }
+namespace MfgEnabler;
 
- public static class Updates {
-  public static readonly string DataRoot=System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MFG Enabler","payload");
-  static string ActiveFile { get { return System.IO.Path.Combine(DataRoot,"active.json"); } }
-  public static string RemotePath(string name) {
-   if(name=="version.dll"||name=="dlssg_sm86.ini") return name;
-   if(Payload.Proxies.Contains(name)) return "altnative/"+name;
-   throw new IOException("알 수 없는 업데이트 파일: "+name);
-  }
-  static bool HashLike(string value,int length) { return value!=null && Regex.IsMatch(value,"\\A[a-f0-9]{"+length+"}\\z"); }
-  public static void Validate(RuntimePackage p) {
-   if(p==null||!HashLike(p.Revision,40)||p.Version==null||!Regex.IsMatch(p.Version,"\\A[0-9]+\\.[0-9]+\\.[0-9]+(?:\\.[0-9]+)?\\z")||p.Files==null||p.Files.Count!=6) throw new IOException("업데이트 패키지 기록이 유효하지 않습니다.");
-   var names=Payload.Proxies.Concat(new[]{"dlssg_sm86.ini"}).ToArray();
-    if(p.Channel=="v310.9.1") {
-     if(p.Files.Any(f=>f==null)||p.Files.Select(f=>f.Name).Distinct().Count()!=6||p.Files.Any(f=>!names.Contains(f.Name)||f.Path==null||!f.Path.StartsWith("https://github.com/SilyNoMeta/dlssg_for_sm86/releases/download/",StringComparison.Ordinal)||!HashLike(f.Hash,64)||(f.Blob!=null&&f.Blob!=""&&!HashLike(f.Blob,40)))) throw new IOException("업데이트 파일 목록 또는 해시가 잘못되었습니다.");
-    } else if(p.Files.Any(f=>f==null)||p.Files.Select(f=>f.Name).Distinct().Count()!=6||p.Files.Any(f=>!names.Contains(f.Name)||f.Path!=RemotePath(f.Name)||!HashLike(f.Hash,64)||!HashLike(f.Blob,40))) throw new IOException("업데이트 파일 목록 또는 해시가 잘못되었습니다.");
-  }
-  public static RuntimePackage Current() {
-   if(!File.Exists(ActiveFile)) return Payload.Baseline();
-   Disk.Safe(ActiveFile);var package=Disk.Read<RuntimePackage>(ActiveFile);Validate(package);
-   // Installing a newer app must not silently select an older cached runtime.
-   return new Version(package.Version)<new Version(Payload.BaselineVersion)?Payload.Baseline():package;
-  }
-  public static string DirectoryFor(RuntimePackage p) { if(!HashLike(p.Revision,40)) throw new IOException("잘못된 패키지 커밋");return System.IO.Path.Combine(DataRoot,p.Revision); }
+public static class Updates
+{
+	public const string Channel = "dlssg_for_sm86";
 
-  public static byte[] Download(string url,int maxBytes) {
-   ServicePointManager.SecurityProtocol=SecurityProtocolType.Tls12;
-   var request=(HttpWebRequest)WebRequest.Create(url);request.UserAgent="MFG-Enabler/1.3";request.Timeout=30000;request.ReadWriteTimeout=30000;
-   using(var response=(HttpWebResponse)request.GetResponse()) using(var input=response.GetResponseStream()) using(var output=new MemoryStream()) {
-    if(response.ContentLength>maxBytes) throw new IOException("업데이트 파일 크기 제한 초과");
-    var buffer=new byte[65536];int read;
-    while((read=input.Read(buffer,0,buffer.Length))>0){if(output.Length+read>maxBytes)throw new IOException("업데이트 파일 크기 제한 초과");output.Write(buffer,0,read);}
-    return output.ToArray();
-   }
-  }
-  static string GitBlob(byte[] bytes) {
-   using(var sha=SHA1.Create()) { var header=Encoding.ASCII.GetBytes("blob "+bytes.Length+"\0");sha.TransformBlock(header,0,header.Length,null,0);sha.TransformFinalBlock(bytes,0,bytes.Length);return BitConverter.ToString(sha.Hash).Replace("-","").ToLowerInvariant(); }
-  }
-  static Dictionary<string,object> Json(string url) {var obj=new JavaScriptSerializer{MaxJsonLength=16*1024*1024}.DeserializeObject(Encoding.UTF8.GetString(Download(url,16*1024*1024))) as Dictionary<string,object>;if(obj==null)throw new IOException("GitHub 응답 형식 오류");return obj;}
-  static object Get(Dictionary<string,object> d,string key) {object value;return d!=null&&d.TryGetValue(key,out value)?value:null;}
+	private const string Api = "https://api.github.com/repos/sdli1995/dlssg_for_sm86/";
 
-  public static void Ensure(RuntimePackage package,string name,Action<string> progress,string cacheDirectory=null) {
-   Validate(package);var spec=package.Files.Single(f=>f.Name==name);string directory=cacheDirectory??DirectoryFor(package),target=System.IO.Path.Combine(directory,name);Disk.Safe(directory);
-   if(Disk.Hash(target)==spec.Hash)return;
-    progress("dlssg_for_sm86 "+package.Version+" · "+name+" 다운로드 중…");
-    byte[] bytes=(package.Channel=="v310.9.1")?Download(spec.Path,128*1024*1024):Download("https://raw.githubusercontent.com/sdli1995/dlssg_for_sm86/"+package.Revision+"/"+spec.Path,128*1024*1024);
-    if(Disk.HashBytes(bytes)!=spec.Hash||(package.Channel!="v310.9.1"&&GitBlob(bytes)!=spec.Blob))throw new IOException("다운로드 무결성 확인 실패: "+name);
-   Directory.CreateDirectory(directory);Disk.Write(target,bytes);
-  }
+	public static string DataRoot { get; internal set; } = Path.Combine(Environment.GetEnvironmentVariable("MFG_ENABLER_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MFG Enabler"), "payload");
 
-   public static RuntimePackage FetchLatest(RuntimePackage current,string channel,Action<string> progress) {
-    if(channel=="v310.9.1")return FetchSily(current,progress);
-    const string api="https://api.github.com/repos/sdli1995/dlssg_for_sm86/";
-       progress("dlssg_for_sm86 최신 버전 확인 중…");var head=Json(api+"commits/main");string revision=Get(head,"sha") as string;
-   if(!HashLike(revision,40))throw new IOException("GitHub 커밋 정보 오류");
-   if(revision==current.Revision)return current;
-   var tree=Json(api+"git/trees/"+revision+"?recursive=1");
-   if(!(Get(tree,"truncated") is bool)||((bool)Get(tree,"truncated")))throw new IOException("GitHub 파일 목록이 불완전합니다.");
-   var rows=Get(tree,"tree") as object[];if(rows==null)throw new IOException("GitHub 파일 목록 오류");
-   var entries=rows.OfType<Dictionary<string,object>>().ToList();
-   var readme=entries.SingleOrDefault(e=>(Get(e,"path") as string)=="README.en.md"&&(Get(e,"type") as string)=="blob");
-    if(readme==null)throw new IOException("dlssg_for_sm86 버전 안내 파일이 없습니다.");
-   var readmeBytes=Download("https://raw.githubusercontent.com/sdli1995/dlssg_for_sm86/"+revision+"/README.en.md",1024*1024);
-   if(GitBlob(readmeBytes)!=(Get(readme,"sha") as string))throw new IOException("버전 안내 파일 무결성 오류");
-   var match=Regex.Match(Encoding.UTF8.GetString(readmeBytes),@"(?m)^#\s+DLSSG Native\s+([0-9]+\.[0-9]+\.[0-9]+(?:\.[0-9]+)?)\s*$");
-    if(!match.Success)throw new IOException("새 dlssg_for_sm86 버전 형식을 인식하지 못했습니다. 현재 버전을 유지합니다.");
-   string version=match.Groups[1].Value;if(new Version(version)<new Version(current.Version))throw new IOException("이전 버전으로 자동 변경하지 않습니다.");
-   var next=new RuntimePackage{Revision=revision,Version=version,Files=new List<PackageFile>()};
-   foreach(string name in Payload.Proxies.Concat(new[]{"dlssg_sm86.ini"})) {
-    string path=RemotePath(name);var node=entries.SingleOrDefault(e=>(Get(e,"path") as string)==path&&(Get(e,"type") as string)=="blob"&&(Get(e,"mode") as string)=="100644");
-    string blob=node==null?null:Get(node,"sha") as string;
-    if(!HashLike(blob,40))throw new IOException("업데이트 설치 형식이 달라졌습니다: "+name);
-    var previous=current.Files.Single(f=>f.Name==name);
-    next.Files.Add(new PackageFile{Name=name,Path=path,Blob=blob,Hash=previous.Blob==blob?previous.Hash:null});
-   }
-   if(next.Version==current.Version&&next.Files.All(f=>f.Blob==current.Files.Single(o=>o.Name==f.Name).Blob))return current;
-   // Download the complete set before changing the active package pointer.
-   string staging=DirectoryFor(next);Disk.Safe(staging);Directory.CreateDirectory(staging);
-   foreach(var file in next.Files) {
-    string target=System.IO.Path.Combine(staging,file.Name);byte[] bytes=null;
-    if(File.Exists(target)){var existing=File.ReadAllBytes(target);if(GitBlob(existing)==file.Blob)bytes=existing;}
-    if(bytes==null) {
-     string prior=System.IO.Path.Combine(DirectoryFor(current),file.Name);
-     if(file.Hash!=null&&Disk.Hash(prior)==file.Hash)bytes=File.ReadAllBytes(prior);
-           else {progress("dlssg_for_sm86 "+version+" · "+file.Name+" 다운로드 중…");bytes=Download("https://raw.githubusercontent.com/sdli1995/dlssg_for_sm86/"+revision+"/"+file.Path,128*1024*1024);}
-    }
-    if(GitBlob(bytes)!=file.Blob)throw new IOException("GitHub 파일 해시 불일치: "+file.Name);
-    file.Hash=Disk.HashBytes(bytes);Disk.Write(target,bytes);
-    if(file.Name.EndsWith(".dll")&&!Discovery.IsX64(target))throw new IOException("x64 DLL 형식이 아닙니다: "+file.Name);
-    if(file.Name=="dlssg_sm86.ini") {
-     string ini=Encoding.UTF8.GetString(bytes);
-     if(!Regex.IsMatch(ini,@"(?mi)^\s*Router\s*=\s*SM86\s*$")||!Regex.IsMatch(ini,@"(?mi)^\s*KernelImage\s*=\s*PTX\s*$"))throw new IOException("dlssg_for_sm86/PTX 기본 설정이 변경되었습니다. 자동 적용을 중단합니다.");
-    }
-   }
-   Validate(next);Disk.Save(System.IO.Path.Combine(staging,"package.json"),next);Disk.Save(ActiveFile,next);return next;
-  }
+	private static string ActiveFile => Path.Combine(DataRoot, "active.json");
 
-   static bool VersionLike(string v) {
-    if(String.IsNullOrEmpty(v))return false;
-    var parts=v.Split('.');
-    if(parts.Length!=3&&parts.Length!=4)return false;
-    foreach(var p in parts){if(p.Length==0||p.Length>5)return false;foreach(var c in p)if(c<'0'||c>'9')return false;}
-    return true;
-   }
-   static RuntimePackage FetchSily(RuntimePackage current,Action<string> progress) {
-    progress("v310.9.1 최신 버전 확인 중…");
-    var raw=Download("https://api.github.com/repos/SilyNoMeta/dlssg_for_sm86/releases",8*1024*1024);
-    var releases=new JavaScriptSerializer{MaxJsonLength=16*1024*1024}.DeserializeObject(Encoding.UTF8.GetString(raw)) as object[];
-    if(releases==null)throw new IOException("GitHub 파일 목록 오류");
-    Dictionary<string,object> stable=null,any=null;DateTime tS=DateTime.MinValue,tA=DateTime.MinValue;
-    foreach(var r in releases) {
-     var row=r as Dictionary<string,object>;if(row==null)continue;
-     if(Get(row,"draft") is bool dd&&dd)continue;
-     if(!DateTime.TryParse(Get(row,"published_at") as string,out var pub))continue;
-     if(pub>tA){tA=pub;any=row;}
-     if(!(Get(row,"prerelease") is bool pp&&pp)&&pub>tS){tS=pub;stable=row;}
-    }
-    var pick=stable??any;
-    if(pick==null)throw new IOException("GitHub 파일 목록 오류");
-    string tag=Get(pick,"tag_name") as string;
-    string commitish=Get(pick,"target_commitish") as string;
-    if(!HashLike(commitish,40))throw new IOException("GitHub 커밋 정보 오류");
-    string version=(tag!=null&&tag.StartsWith("v")?tag.Substring(1):tag??"").Replace("-",".");
-    if(!VersionLike(version))throw new IOException("새 dlssg_for_sm86 버전 형식을 인식하지 못했습니다. 현재 버전을 유지합니다.");
-    if(commitish==current.Revision)return current;
-    if(new Version(version)<new Version(current.Version))throw new IOException("이전 버전으로 자동 변경하지 않습니다.");
-    string dllUrl=null,dllHash=null,iniUrl=null,iniHash=null;
-    foreach(var a in (Get(pick,"assets") as object[])??new object[0]) {
-     var asset=a as Dictionary<string,object>;if(asset==null)continue;
-     string n=Get(asset,"name") as string,u=Get(asset,"browser_download_url") as string,d=Get(asset,"digest") as string;
-     string h=(d!=null&&d.StartsWith("sha256:"))?d.Substring(7):null;
-     if(n=="version.dll"){dllUrl=u;dllHash=h;}else if(n=="dlssg_sm86.ini"){iniUrl=u;iniHash=h;}
-    }
-    if(String.IsNullOrEmpty(dllUrl)||!HashLike(dllHash,64)||String.IsNullOrEmpty(iniUrl)||!HashLike(iniHash,64))throw new IOException("업데이트 설치 형식이 달라졌습니다: version.dll");
-    var next=new RuntimePackage{Revision=commitish,Version=version,Channel="v310.9.1",Files=new List<PackageFile>()};
-    foreach(string name in Payload.Proxies)next.Files.Add(new PackageFile{Name=name,Path=dllUrl,Hash=dllHash,Blob=""});
-    next.Files.Add(new PackageFile{Name="dlssg_sm86.ini",Path=iniUrl,Hash=iniHash,Blob=""});
-    string staging=DirectoryFor(next);Disk.Safe(staging);Directory.CreateDirectory(staging);
-    foreach(var file in next.Files) {
-     Ensure(next,file.Name,progress,staging);
-     string target=System.IO.Path.Combine(staging,file.Name);
-     if(file.Name.EndsWith(".dll")&&!Discovery.IsX64(target))throw new IOException("x64 DLL 형식이 아닙니다: "+file.Name);
-    }
-    Validate(next);Disk.Save(System.IO.Path.Combine(staging,"package.json"),next);Disk.Save(ActiveFile,next);return next;
-   }
-   public static RuntimePackage BaselineFor(string channel) {
-    if(channel=="v310.9.1")return new RuntimePackage{Revision="",Version="0.0.0",Channel="v310.9.1",Files=Payload.Proxies.Concat(new[]{"dlssg_sm86.ini"}).Select(n=>new PackageFile{Name=n}).ToList()};
-    return Payload.Baseline();
-   }
-   public static void BakeV310Ini(Dictionary<string,string> values,Action<string> progress) {
-    RuntimePackage package=null;
-    try { package=Current(); } catch { package=null; }
-    if(package==null||(package.Channel??"dlssg_for_sm86")!="v310.9.1")package=FetchLatest(BaselineFor("v310.9.1"),"v310.9.1",progress);
-    string iniUrl=package.Files.Single(f=>f.Name=="dlssg_sm86.ini").Path;
-    string sumsUrl=iniUrl.Substring(0,iniUrl.LastIndexOf('/')+1)+"SHA256SUMS.txt";
-    string expect=null;
-    var toks=Encoding.UTF8.GetString(Download(sumsUrl,1024*1024)).Split((char[])null,StringSplitOptions.RemoveEmptyEntries);
-    for(int i=0;i+1<toks.Length;i+=2)if(toks[i+1]=="dlssg_sm86.ini")expect=toks[i];
-    if(!HashLike(expect,64))throw new IOException("다운로드 무결성 확인 실패: dlssg_sm86.ini");
-    byte[] stock=Download(iniUrl,1024*1024);
-    if(Disk.HashBytes(stock)!=expect)throw new IOException("다운로드 무결성 확인 실패: dlssg_sm86.ini");
-    string text=Encoding.UTF8.GetString(stock);
-    if(values!=null&&values.Count>0)text=ApplyIniValues(text,values);
-    byte[] baked=Encoding.UTF8.GetBytes(text);
-    string dir=DirectoryFor(package);Directory.CreateDirectory(dir);
-    Disk.Write(System.IO.Path.Combine(dir,"dlssg_sm86.ini"),baked);
-    package.Files.Single(f=>f.Name=="dlssg_sm86.ini").Hash=Disk.HashBytes(baked);
-    package.Files.Single(f=>f.Name=="dlssg_sm86.ini").Blob="";
-    Disk.Save(ActiveFile,package);
-   }
-   public static string ApplyIniValues(string stock,Dictionary<string,string> values) {
-    var order=new[]{
-     new[]{"FrameGeneration","MaxMultiplier"},new[]{"FrameGeneration","ForceMultiplier"},
-     new[]{"FrameGeneration","DynamicMFG"},new[]{"FrameGeneration","DynamicTargetFPS"},
-     new[]{"Optimizations","HardwareBilinear"},new[]{"Optimizations","Conv13SharedInput"},
-     new[]{"Optimizations","Conv0SharedInput"},new[]{"Optimizations","ResidualVectorLoads"}};
-    var lines=new List<string>();
-    using(var reader=new System.IO.StringReader(stock)){string line;while((line=reader.ReadLine())!=null)lines.Add(line);}
-    var done=new HashSet<string>();
-    string section="";
-    for(int i=0;i<lines.Count;i++) {
-     string t=lines[i].Trim();
-     if(t.Length>2&&t[0]=='['&&t[t.Length-1]==']'){section=t.Substring(1,t.Length-2).Trim();continue;}
-     if(t.Length==0||t[0]==';'||t[0]=='#')continue;
-     int eq=t.IndexOf('=');
-     if(eq<0)continue;
-     string key=t.Substring(0,eq).Trim();
-     foreach(var pair in order) {
-      if(done.Contains(pair[1])||!section.Equals(pair[0],StringComparison.OrdinalIgnoreCase)||!key.Equals(pair[1],StringComparison.OrdinalIgnoreCase))continue;
-      string v;if(values!=null&&values.TryGetValue(pair[1],out v)){lines[i]=pair[1]+"="+v;done.Add(pair[1]);}
-      break;
-     }
-    }
-    foreach(var pair in order) {
-     if(done.Contains(pair[1]))continue;
-     string v;if(values==null||!values.TryGetValue(pair[1],out v))continue;
-     int at=-1;
-     for(int i=0;i<lines.Count;i++){string t=lines[i].Trim();if(t.Length>2&&t[0]=='['&&t[t.Length-1]==']'&&t.Substring(1,t.Length-2).Trim().Equals(pair[0],StringComparison.OrdinalIgnoreCase)){at=i;break;}}
-     if(at<0){if(lines.Count>0&&lines[lines.Count-1].Trim().Length!=0)lines.Add("");lines.Add("["+pair[0]+"]");at=lines.Count-1;}
-     lines.Insert(at+1,pair[1]+"="+v);done.Add(pair[1]);
-    }
-    return string.Join(Environment.NewLine,lines);
-   }
-   public static UpdateResult CheckAndApply(IEnumerable<Game> known,Action<string> progress,string channel) {
-    var result=new UpdateResult();RuntimePackage selected=Current();bool checkFailed=false;
-    if((selected.Channel??"dlssg_for_sm86")!=channel)selected=BaselineFor(channel);
-    try {selected=FetchLatest(selected,channel,progress);}catch(Exception e){checkFailed=true;result.Details.Add("업데이트 확인 실패 · 기존 버전 유지: "+e.Message);}
-   int applied=0,skipped=0;
-   foreach(var game in known.Where(g=>g!=null&&!String.IsNullOrEmpty(g.Exe)).GroupBy(g=>System.IO.Path.GetDirectoryName(g.Exe),StringComparer.OrdinalIgnoreCase).Select(g=>g.First())) {
-    try {
-     var installer=new Installer(System.IO.Path.GetDirectoryName(game.Exe));var journal=installer.Load();
-     if(journal==null||journal.Phase=="disabled")continue;
-     if(!File.Exists(game.Exe))throw new IOException("게임 실행 파일이 없습니다.");
-     var relevant=selected.Files.Where(f=>f.Name==journal.Proxy||f.Name=="dlssg_sm86.ini").ToList();
-     if(journal.Phase=="enabled"&&journal.Files.All(e=>relevant.Any(f=>f.Name==e.Name&&f.Hash==e.Installed)))continue;
-     if(journal.Phase!="enabled")throw new IOException("먼저 중단된 작업을 복구하세요.");
-     installer.VerifyRestore();
-     foreach(var file in relevant)Ensure(selected,file.Name,progress);
-      progress(game.Name+" · dlssg_for_sm86 "+selected.Version+" 적용 중…");installer.Upgrade(selected);applied++;
-    }catch(Exception e){skipped++;result.Details.Add(game.Name+" · 적용 보류: "+e.Message);}
-   }
-    if(checkFailed)result.Summary="dlssg_for_sm86 "+selected.Version+" · 확인 실패";
-    else if(applied>0)result.Summary="dlssg_for_sm86 "+selected.Version+" · "+applied+"개 갱신"+(skipped>0?" · "+skipped+"개 보류":"");
-    else result.Summary="dlssg_for_sm86 "+selected.Version+" · 업데이트 없음"+(skipped>0?" · "+skipped+"개 보류":"");
-    result.Details.Insert(0,result.Summary);return result;
-  }
- }
+	private static string MetadataFile => Path.Combine(DataRoot, "sdli1995.json");
+
+	private static IEnumerable<string> Names => Payload.Proxies.Concat(new string[1] { "dlssg_sm86.ini" });
+
+	private static bool HashLike(string value, int length)
+	{
+		if (value != null)
+		{
+			return Regex.IsMatch(value, "\\A[a-f0-9]{" + length + "}\\z");
+		}
+		return false;
+	}
+
+	public static string RemotePath(string name)
+	{
+		if (name == "version.dll" || name == "dlssg_sm86.ini")
+		{
+			return name;
+		}
+		if (Payload.Proxies.Contains(name))
+		{
+			return "alternatives/" + name;
+		}
+		throw new IOException("Unknown runtime file: " + name);
+	}
+
+	public static void Validate(RuntimePackage p)
+	{
+		if (p == null || !HashLike(p.Revision, 40) || !Version.TryParse(p.Version, out Version result) || result < new Version("0.3.4") || p.Channel != "dlssg_for_sm86" || p.Files == null || p.Files.Count != Names.Count())
+		{
+			throw new IOException("Invalid runtime package metadata.");
+		}
+		if (p.Files.Any((PackageFile f) => f == null) || p.Files.Select((PackageFile f) => f.Name).Distinct<string>(StringComparer.OrdinalIgnoreCase).Count() != Names.Count() || p.Files.Any((PackageFile f) => !Names.Contains(f.Name) || f.Path != RemotePath(f.Name) || !HashLike(f.Hash, 64) || !HashLike(f.Blob, 40)))
+		{
+			throw new IOException("Invalid runtime file list or hashes.");
+		}
+	}
+
+	public static RuntimePackage Current()
+	{
+		if (!File.Exists(ActiveFile))
+		{
+			return Payload.Baseline();
+		}
+		Disk.Safe(ActiveFile);
+		RuntimePackage runtimePackage = Disk.Read<RuntimePackage>(ActiveFile);
+		if (runtimePackage == null || runtimePackage.Channel != "dlssg_for_sm86" || !Version.TryParse(runtimePackage.Version, out Version result) || result < new Version("0.3.4"))
+		{
+			return Payload.Baseline();
+		}
+		Validate(runtimePackage);
+		return runtimePackage;
+	}
+
+	public static string DirectoryFor(RuntimePackage p)
+	{
+		Validate(p);
+		return Path.Combine(DataRoot, "sdli1995");
+	}
+
+	public static string FileFor(RuntimePackage p, string name, string directory = null)
+	{
+		if (!Names.Contains(name))
+		{
+			throw new IOException("Unknown runtime file.");
+		}
+		return Path.Combine(directory ?? DirectoryFor(p), name);
+	}
+
+	private static bool Published(RuntimePackage p)
+	{
+		try
+		{
+			Disk.Safe(MetadataFile);
+			RuntimePackage runtimePackage = Disk.Read<RuntimePackage>(MetadataFile);
+			Validate(runtimePackage);
+			return runtimePackage.Revision == p.Revision && runtimePackage.Files.All((PackageFile f) => p.Files.Any((PackageFile v) => v.Name == f.Name && v.Hash == f.Hash)) && p.Files.All((PackageFile f) => Disk.Hash(FileFor(p, f.Name)) == f.Hash);
+		}
+		catch
+		{
+			return false;
+		}
+	}
+
+	public static RuntimePackage Prepare(RuntimePackage p, Action<string> progress)
+	{
+		if (!Published(p))
+		{
+			return FetchLatest(p, progress);
+		}
+		return p;
+	}
+
+	private static string NewStage()
+	{
+		string text = Path.Combine(DataRoot, ".stage-" + Guid.NewGuid().ToString("N"));
+		Disk.Safe(text);
+		Directory.CreateDirectory(text);
+		return text;
+	}
+
+	private static void RemoveCache(string path)
+	{
+		path = Path.GetFullPath(path);
+		string fullPath = Path.GetFullPath(DataRoot);
+		if (!string.Equals(Path.GetDirectoryName(path), fullPath, StringComparison.OrdinalIgnoreCase))
+		{
+			throw new IOException("Invalid cache cleanup path.");
+		}
+		if (!Directory.Exists(path))
+		{
+			return;
+		}
+		Disk.Safe(path);
+		if (Directory.GetDirectories(path).Length != 0)
+		{
+			return;
+		}
+		string[] files = Directory.GetFiles(path);
+		if (!files.Any((string f) => !Names.Contains<string>(Path.GetFileName(f)) && Path.GetFileName(f) != "winhttp.dll" && Path.GetFileName(f) != "package.json"))
+		{
+			string[] array = files;
+			for (int num = 0; num < array.Length; num++)
+			{
+				Disk.Safe(array[num]);
+			}
+			array = files;
+			for (int num = 0; num < array.Length; num++)
+			{
+				File.Delete(array[num]);
+			}
+			Directory.Delete(path);
+		}
+	}
+
+	internal static void Publish(RuntimePackage p, string staging)
+	{
+		Validate(p);
+		Disk.Safe(staging);
+		foreach (PackageFile file in p.Files)
+		{
+			ValidateInstallBytes(p, file.Name, File.ReadAllBytes(FileFor(p, file.Name, staging)));
+		}
+		string text = DirectoryFor(p);
+		string text2 = Path.Combine(DataRoot, ".backup-" + Guid.NewGuid().ToString("N"));
+		Disk.Safe(text);
+		Disk.Safe(text2);
+		Disk.Safe(MetadataFile);
+		Disk.Safe(ActiveFile);
+		byte[] array = (File.Exists(MetadataFile) ? File.ReadAllBytes(MetadataFile) : null);
+		byte[] array2 = (File.Exists(ActiveFile) ? File.ReadAllBytes(ActiveFile) : null);
+		bool flag = false;
+		bool flag2 = false;
+		try
+		{
+			if (Directory.Exists(text))
+			{
+				Directory.Move(text, text2);
+				flag = true;
+			}
+			Directory.Move(staging, text);
+			flag2 = true;
+			Disk.Save(MetadataFile, p);
+			Disk.Save(ActiveFile, p);
+		}
+		catch
+		{
+			if (flag2)
+			{
+				RemoveCache(text);
+			}
+			if (flag)
+			{
+				Directory.Move(text2, text);
+			}
+			if (array != null)
+			{
+				Disk.Write(MetadataFile, array);
+			}
+			else if (File.Exists(MetadataFile))
+			{
+				File.Delete(MetadataFile);
+			}
+			if (array2 != null)
+			{
+				Disk.Write(ActiveFile, array2);
+			}
+			else if (File.Exists(ActiveFile))
+			{
+				File.Delete(ActiveFile);
+			}
+			throw;
+		}
+		try
+		{
+			RemoveCache(text2);
+		}
+		catch (IOException)
+		{
+		}
+		catch (UnauthorizedAccessException)
+		{
+		}
+	}
+
+	public static void ValidateInstallBytes(RuntimePackage p, string name, byte[] bytes)
+	{
+		if (Disk.HashBytes(bytes) != p.Files.Single((PackageFile f) => f.Name == name).Hash)
+		{
+			throw new IOException("Runtime hash mismatch: " + name);
+		}
+		if (name == "dlssg_sm86.ini")
+		{
+			ValidateIni(bytes);
+		}
+	}
+
+	internal static void ValidateIni(byte[] bytes)
+	{
+		if (bytes.Length == 0 || bytes.Length > 1048576)
+		{
+			throw new IOException("Invalid INI size.");
+		}
+		string text;
+		try
+		{
+			text = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true).GetString(bytes).TrimStart('\ufeff');
+		}
+		catch (DecoderFallbackException)
+		{
+			throw new IOException("Invalid INI encoding.");
+		}
+		bool flag = false;
+		string[] array = text.Split('\n');
+		for (int i = 0; i < array.Length; i++)
+		{
+			string text2 = array[i].Trim();
+			if (text2.Length != 0 && !text2.StartsWith(";") && !text2.StartsWith("#"))
+			{
+				if (text2.IndexOf('\0') >= 0)
+				{
+					throw new IOException("Invalid INI content.");
+				}
+				if (text2.StartsWith("[") && text2.EndsWith("]") && text2.Length > 2)
+				{
+					flag = true;
+				}
+				else if (!flag || text2.IndexOf('=') <= 0)
+				{
+					throw new IOException("Invalid INI content.");
+				}
+			}
+		}
+		if (!flag)
+		{
+			throw new IOException("INI has no sections.");
+		}
+	}
+
+	internal static byte[] VerifyDownload(RuntimePackage p, string name, byte[] bytes)
+	{
+		PackageFile packageFile = p.Files.Single((PackageFile x) => x.Name == name);
+		if (GitBlob(bytes) != packageFile.Blob || (packageFile.Hash != null && Disk.HashBytes(bytes) != packageFile.Hash))
+		{
+			throw new IOException("Source archive integrity check failed: " + name);
+		}
+		if (name == "dlssg_sm86.ini")
+		{
+			ValidateIni(bytes);
+		}
+		return bytes;
+	}
+
+	private static HttpWebRequest Request(string url)
+	{
+		ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+		HttpWebRequest obj = (HttpWebRequest)WebRequest.Create(url);
+		obj.UserAgent = "MFG-Enabler/1.2";
+		obj.Timeout = 30000;
+		obj.ReadWriteTimeout = 30000;
+		return obj;
+	}
+
+	private static void DownloadTo(string url, Stream output, long max)
+	{
+		using HttpWebResponse httpWebResponse = (HttpWebResponse)Request(url).GetResponse();
+		using Stream stream = httpWebResponse.GetResponseStream();
+		if (httpWebResponse.ContentLength > max)
+		{
+			throw new IOException("Download size limit exceeded.");
+		}
+		byte[] array = new byte[81920];
+		long num = 0L;
+		int num2;
+		while ((num2 = stream.Read(array, 0, array.Length)) > 0)
+		{
+			num += num2;
+			if (num > max)
+			{
+				throw new IOException("Download size limit exceeded.");
+			}
+			output.Write(array, 0, num2);
+		}
+	}
+
+	public static byte[] Download(string url, int maxBytes)
+	{
+		using MemoryStream memoryStream = new MemoryStream();
+		DownloadTo(url, memoryStream, maxBytes);
+		return memoryStream.ToArray();
+	}
+
+	internal static string GitBlob(byte[] bytes)
+	{
+		using SHA1 sHA = SHA1.Create();
+		byte[] bytes2 = Encoding.ASCII.GetBytes("blob " + bytes.Length + "\0");
+		sHA.TransformBlock(bytes2, 0, bytes2.Length, null, 0);
+		sHA.TransformFinalBlock(bytes, 0, bytes.Length);
+		return Convert.ToHexString(sHA.Hash).ToLowerInvariant();
+	}
+
+	private static Dictionary<string, object> Json(string url)
+	{
+		return (new JavaScriptSerializer
+		{
+			MaxJsonLength = 16777216
+		}.DeserializeObject(Encoding.UTF8.GetString(Download(url, 16777216))) as Dictionary<string, object>) ?? throw new IOException("Invalid GitHub response.");
+	}
+
+	private static object Get(Dictionary<string, object> d, string key)
+	{
+		if (d == null || !d.TryGetValue(key, out var value))
+		{
+			return null;
+		}
+		return value;
+	}
+
+	public static void Ensure(RuntimePackage p, string name, Action<string> progress, string cacheDirectory = null)
+	{
+		Validate(p);
+		string path = FileFor(p, name, cacheDirectory);
+		Disk.Safe(path);
+		if (!(Disk.Hash(path) == p.Files.Single((PackageFile f) => f.Name == name).Hash))
+		{
+			DownloadPackage(p, progress);
+			if (cacheDirectory != null && !string.Equals(Path.GetFullPath(cacheDirectory), Path.GetFullPath(DirectoryFor(p)), StringComparison.OrdinalIgnoreCase))
+			{
+				throw new IOException("Custom payload cache is incomplete.");
+			}
+		}
+	}
+
+	internal static RuntimePackage ExtractSourceArchive(RuntimePackage p, string archivePath, string staging)
+	{
+		using (ZipArchive zipArchive = ZipFile.OpenRead(archivePath))
+		{
+			if (zipArchive.Entries.Count > 100000)
+			{
+				throw new IOException("Source ZIP contains too many files.");
+			}
+			Dictionary<string, PackageFile> dictionary = p.Files.ToDictionary<PackageFile, string>((PackageFile f) => f.Path, StringComparer.Ordinal);
+			HashSet<string> hashSet = new HashSet<string>(StringComparer.Ordinal);
+			string text = null;
+			foreach (ZipArchiveEntry entry in zipArchive.Entries)
+			{
+				int num = entry.FullName.IndexOf('/');
+				if (num < 1)
+				{
+					continue;
+				}
+				string text2 = entry.FullName.Substring(num + 1);
+				if (!dictionary.TryGetValue(text2, out var value))
+				{
+					continue;
+				}
+				string text3 = entry.FullName.Substring(0, num);
+				if (text == null)
+				{
+					text = text3;
+				}
+				if (text != text3 || text3 == ".." || text3 == "." || text3.Contains('\\') || !hashSet.Add(text2) || ((entry.ExternalAttributes >> 16) & 0xF000) == 40960 || entry.Length <= 0 || entry.Length > 134217728)
+				{
+					throw new IOException("Unsafe or duplicate runtime entry.");
+				}
+				byte[] bytes;
+				using (Stream stream = entry.Open())
+				{
+					using MemoryStream memoryStream = new MemoryStream();
+					byte[] array = new byte[81920];
+					int num2;
+					while ((num2 = stream.Read(array, 0, array.Length)) > 0)
+					{
+						if (memoryStream.Length + num2 > 134217728)
+						{
+							throw new IOException("Runtime file too large.");
+						}
+						memoryStream.Write(array, 0, num2);
+					}
+					bytes = memoryStream.ToArray();
+				}
+				VerifyDownload(p, value.Name, bytes);
+				value.Hash = Disk.HashBytes(bytes);
+				string text4 = FileFor(p, value.Name, staging);
+				Disk.Write(text4, bytes);
+				if (value.Name.EndsWith(".dll") && !Discovery.IsX64(text4))
+				{
+					throw new IOException("Runtime is not an x64 DLL: " + value.Name);
+				}
+			}
+			if (hashSet.Count != dictionary.Count)
+			{
+				throw new IOException("Source ZIP is missing required runtime files.");
+			}
+		}
+		Validate(p);
+		return p;
+	}
+
+	private static RuntimePackage DownloadPackage(RuntimePackage p, Action<string> progress)
+	{
+		string text = NewStage();
+		string text2 = Path.Combine(DataRoot, ".source-" + Guid.NewGuid().ToString("N") + ".zip");
+		Disk.Safe(text2);
+		try
+		{
+			progress("dlssg_for_sm86 " + p.Version + " · source ZIP 다운로드 중…");
+			using (FileStream output = new FileStream(text2, FileMode.CreateNew))
+			{
+				DownloadTo("https://api.github.com/repos/sdli1995/dlssg_for_sm86/zipball/" + p.Revision, output, 1073741824L);
+			}
+			ExtractSourceArchive(p, text2, text);
+			Publish(p, text);
+			return p;
+		}
+		finally
+		{
+			if (File.Exists(text2))
+			{
+				File.Delete(text2);
+			}
+			RemoveCache(text);
+		}
+	}
+
+	internal static string ExtractEnglishNotes(string body)
+	{
+		if (string.IsNullOrWhiteSpace(body)) return "No release notes were provided.";
+		List<string> list = new List<string>();
+		foreach (string raw in body.Replace("\r", "").Split('\n'))
+		{
+			string text = raw.Trim();
+			if (text.Length == 0)
+			{
+				if (list.Count != 0 && list[list.Count - 1].Length != 0) list.Add("");
+				continue;
+			}
+			if (Regex.IsMatch(text, "[\\u3400-\\u9fff\\u3040-\\u30ff\\uac00-\\ud7af]")) continue;
+			text = Regex.Replace(text, "!\\[[^\\]]*\\]\\([^)]+\\)", "");
+			text = Regex.Replace(text, "\\[([^\\]]+)\\]\\([^)]+\\)", "$1");
+			text = Regex.Replace(text, "^\\s*#{1,6}\\s*", "").Replace("**", "").Replace("`", "").Trim();
+			if (text.Equals("English", StringComparison.OrdinalIgnoreCase) || text.Equals("EN", StringComparison.OrdinalIgnoreCase)) continue;
+			if (text.Length != 0) list.Add(text);
+		}
+		string result = string.Join(Environment.NewLine, list).Trim();
+		return result.Length == 0 ? "See the upstream release page for details." : result;
+	}
+
+	public static RuntimeReleaseNotes FetchReleaseNotes()
+	{
+		Dictionary<string, object> d = Json(Api + "releases/latest");
+		string tag = Get(d, "tag_name") as string;
+		object draft = Get(d, "draft");
+		object prerelease = Get(d, "prerelease");
+		if (!(draft is bool) || (bool)draft || !(prerelease is bool) || (bool)prerelease || !Regex.IsMatch(tag ?? "", "\\Av?\\d+\\.\\d+\\.\\d+\\z"))
+		{
+			throw new IOException("Unsupported upstream release version.");
+		}
+		string version = tag.TrimStart('v');
+		string url = Get(d, "html_url") as string;
+		if (string.IsNullOrWhiteSpace(url)) url = "https://github.com/sdli1995/dlssg_for_sm86/releases/tag/" + Uri.EscapeDataString(tag);
+		return new RuntimeReleaseNotes(version, url, ExtractEnglishNotes(Get(d, "body") as string));
+	}
+
+	public static RuntimePackage FetchLatest(RuntimePackage current, Action<string> progress)
+	{
+		progress("dlssg_for_sm86 최신 릴리스 확인 중…");
+		Dictionary<string, object> d = Json("https://api.github.com/repos/sdli1995/dlssg_for_sm86/releases/latest");
+		string text = Get(d, "tag_name") as string;
+		object obj = Get(d, "draft");
+		if (obj is bool && !(bool)obj)
+		{
+			obj = Get(d, "prerelease");
+			if (obj is bool && !(bool)obj && Regex.IsMatch(text ?? "", "\\Av?\\d+\\.\\d+\\.\\d+\\z"))
+			{
+				string version = text.TrimStart('v');
+				if (new Version(version) < new Version(current.Version))
+				{
+					throw new IOException("Refusing an older upstream runtime.");
+				}
+				string text2 = Get(Json("https://api.github.com/repos/sdli1995/dlssg_for_sm86/commits/" + Uri.EscapeDataString(text)), "sha") as string;
+				if (!HashLike(text2, 40))
+				{
+					throw new IOException("Invalid release commit.");
+				}
+				if (text2 == current.Revision && Published(current))
+				{
+					return current;
+				}
+				Dictionary<string, object> d2 = Json("https://api.github.com/repos/sdli1995/dlssg_for_sm86/git/trees/" + text2 + "?recursive=1");
+				obj = Get(d2, "truncated");
+				if (!(obj is bool) || (bool)obj || !(Get(d2, "tree") is object[] source))
+				{
+					throw new IOException("Incomplete release tree.");
+				}
+				List<Dictionary<string, object>> source2 = source.OfType<Dictionary<string, object>>().ToList();
+				RuntimePackage runtimePackage = new RuntimePackage
+				{
+					Revision = text2,
+					Version = version,
+					Channel = "dlssg_for_sm86",
+					Files = new List<PackageFile>()
+				};
+				foreach (string name in Names)
+				{
+					string path = RemotePath(name);
+					string text3 = Get(source2.SingleOrDefault((Dictionary<string, object> e) => Get(e, "path") as string == path && Get(e, "type") as string == "blob" && Get(e, "mode") as string == "100644"), "sha") as string;
+					if (!HashLike(text3, 40))
+					{
+						throw new IOException("Unsupported release layout: " + path);
+					}
+					runtimePackage.Files.Add(new PackageFile
+					{
+						Name = name,
+						Path = path,
+						Blob = text3
+					});
+				}
+				return DownloadPackage(runtimePackage, progress);
+			}
+		}
+		throw new IOException("Unsupported upstream release version.");
+	}
+
+	public static UpdateResult CheckAndApply(IEnumerable<Game> known, Action<string> progress)
+	{
+		UpdateResult updateResult = new UpdateResult();
+		RuntimePackage selected = Current();
+		try
+		{
+			selected = FetchLatest(selected, progress);
+		}
+		catch (Exception ex)
+		{
+			updateResult.Summary = "Runtime update check failed; installed games unchanged.";
+			updateResult.Details.Add(updateResult.Summary + " " + ex.Message);
+			return updateResult;
+		}
+		int num = 0;
+		int num2 = 0;
+		foreach (Game item in from g in known.Where((Game g) => g != null && !string.IsNullOrEmpty(g.Exe)).GroupBy<Game, string>((Game g) => Path.GetDirectoryName(g.Exe), StringComparer.OrdinalIgnoreCase)
+			select g.First())
+		{
+			try
+			{
+				Installer installer = new Installer(Path.GetDirectoryName(item.Exe));
+				Journal journal = installer.Load();
+				if (journal != null && !(journal.Phase == "disabled"))
+				{
+					if (!File.Exists(item.Exe))
+					{
+						throw new IOException("Game executable is missing.");
+					}
+					if (journal.Phase != "enabled")
+					{
+						throw new IOException("Restore the interrupted operation first.");
+					}
+					if (!(journal.RuntimeRevision == selected.Revision) || !journal.Files.Where((Entry e) => e.Name.EndsWith(".dll")).All((Entry e) => selected.Files.Any((PackageFile f) => f.Name == e.Name && f.Hash == e.Installed)))
+					{
+						progress(item.Name + " · restore, then install " + selected.Version);
+						installer.Upgrade(selected);
+						num++;
+					}
+				}
+			}
+			catch (Exception ex2)
+			{
+				num2++;
+				updateResult.Details.Add(item.Name + " · update deferred: " + ex2.Message);
+			}
+		}
+		updateResult.Summary = "dlssg_for_sm86 " + selected.Version + " · " + num + " updated, " + num2 + " deferred";
+		updateResult.Details.Insert(0, updateResult.Summary);
+		return updateResult;
+	}
 }

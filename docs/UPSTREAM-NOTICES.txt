@@ -1,37 +1,35 @@
-Upstream notice from sdli1995/dlssg_for_sm86:
-https://github.com/sdli1995/dlssg_for_sm86/blob/main/THIRD_PARTY_NOTICES.txt
-The text below describes that upstream project and its components.
-MFG-Enabler's license is GNU GPL version 3; see LICENSE.
-
-Runtime channel v310.9.1 uses SilyNoMeta/dlssg_for_sm86:
-https://github.com/SilyNoMeta/dlssg_for_sm86
-A fork of sdli1995/dlssg_for_sm86 (MIT license, plus LICENSE-MFGAdaUnlock.txt,
-LICENSE-RTX40MFG.txt and LICENSE-Streamline-headers.txt in that repository).
-MFG-Enabler downloads version.dll and dlssg_sm86.ini from its GitHub releases
-at runtime and verifies them against the release SHA256SUMS. Nothing from that
-project is bundled in this repository.
+Upstream notices for sdli1995/dlssg_for_sm86 0.3.4
+Source: https://github.com/sdli1995/dlssg_for_sm86/blob/196fcb61ef414992a6bef2d237ff609aab09f0d9/THIRD_PARTY_NOTICES.txt
+MFG-Enabler downloads the runtime separately; these notices describe the upstream runtime.
+MFG-Enabler itself is licensed under GPL-3.0-only; see LICENSE.
 
 Helper libraries used by this project
 
 Project source follows the dlssg-to-fsr3 repository's GPLv3 license
 (LICENSE.md). The NVIDIA runtime DLL and extracted/recompiled NVIDIA kernel
 assets are separate third-party material from this user's local installation;
-they are not relicensed by LICENSE.md. Native 0.2.3 embeds model/graph/kernel
-data, not the original runtime PE. The offline reference source is the
-unmodified nvngx_dlssg.dll 310.1.0.0 with SHA256:
+they are not relicensed by LICENSE.md. The bundled runtime is an unmodified
+nvngx_dlssg.dll 310.1.0.0 with SHA256:
 c989c0ebd9cd21dbf3db0becd857aa1f218068d94da371d924331a6f0fb97525
 
 SM75 GPU assets: thank you to Coldwood1026 for the RTX 20-series / SM75 work.
-Repository: https://github.com/Coldwood1026/dlssg_for_sm75
-(previous name: Coldwood1026/dlssg_for_sm86).
-Pinned source: https://github.com/Coldwood1026/dlssg_for_sm75/commit/c60c2aa363c7e66a523122aa5cec9c884658ad5f
-No CPU host from that binary is
-embedded. PTX container lengths, termination and alignment were repaired.
-
-SM86 optimized GPU assets: user-supplied dlssg-sm86-kernel-pack.zip, SHA256
-fcbee9f674e49febac16da9cf087e1987e932b065702b08e1147bb2de036fb7b.
-The native host integrates the qualified exact kernel replacements, decoder,
-pair, merge, residual-chain and image fusions; hardware bilinear is optional.
+Repository: https://github.com/Coldwood1026/dlssg_for_sm75 (previous name:
+Coldwood1026/dlssg_for_sm86).
+Pinned source:
+https://github.com/Coldwood1026/dlssg_for_sm75/commit/c60c2aa363c7e66a523122aa5cec9c884658ad5f
+No CPU host from that binary is embedded. PTX container lengths, termination and
+alignment were repaired, and the PTX ISA declaration of the 33 image kernels was
+normalised from 8.7 to 8.5 (payload text and container field; no instruction
+text changed). Two families ship: assets/kernels/sm75 carries PTX with one
+further recorded rewrite (the f16x2 .local unpack repair) and cubins this project
+built from it with ptxas, while assets/kernels/sm75/original carries that
+repository's 72 sm_75 cubins byte for byte and its PTX with only the .version
+normalisation, selected by [Compatibility] SM75Family=Original so a Turing owner
+can A/B the repair. Those assets are themselves derivatives of NVIDIA kernel code
+and are third-party material in the same bucket as assets/runtime/nvngx_dlssg.dll:
+they are not relicensed by LICENSE.md. The per-file manifests with every source
+and imported SHA256 are assets/kernels/sm75/index.json and
+assets/kernels/sm75/original/index.json.
 
 DirectX helper header d3dx12.h
 Copyright (c) Microsoft Corporation. All rights reserved.

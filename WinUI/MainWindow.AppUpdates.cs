@@ -82,7 +82,7 @@ public sealed partial class MainWindow
             };
             choice = await dialog.ShowAsync();
         }
-        finally { dialogOpen = false; }
+        finally { dialogOpen = false; ResumeStorageScan(); }
         if (choice == ContentDialogResult.Secondary)
         {
             string previous = release.Channel == "beta" ? settings.DismissedBetaVersion : settings.DismissedStableVersion;

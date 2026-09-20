@@ -36,6 +36,11 @@
     <SolidColorBrush x:Key="ComboBoxItemSelectionIndicatorFill" Color="#76B900"/>
     <SolidColorBrush x:Key="SystemControlHighlightListAccentLowBrush" Color="#263800"/>
     <SolidColorBrush x:Key="SystemControlHighlightListAccentMediumBrush" Color="#76B900"/>
+   <Style x:Key="SettingsAction" TargetType="Button">
+    <Setter Property="Width" Value="200"/><Setter Property="Height" Value="40"/>
+    <Setter Property="Padding" Value="14,8"/><Setter Property="CornerRadius" Value="4"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+   </Style>
    <Style x:Key="TextAction" TargetType="Button">
     <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
     <Setter Property="Foreground" Value="#EEEEEE"/><Setter Property="FontWeight" Value="SemiBold"/>
