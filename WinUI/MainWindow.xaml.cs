@@ -9,6 +9,7 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using System.Runtime.InteropServices;
 using Windows.Graphics;
@@ -16,25 +17,14 @@ using Windows.Storage.Pickers;
 
 namespace MfgEnabler;
 
-[DataContract]
-public sealed class DesktopSettings
-{
-    [DataMember] public bool AutoUpdate = true;
-    [DataMember] public bool Migrated11;
-    [DataMember] public string Language = "en";
-    [DataMember] public string AppChannel = ReleaseNumber.Parse(AppUpdates.CurrentVersion)?.Beta != null ? "beta" : "main";
-    [DataMember] public string DismissedStableVersion;
-    [DataMember] public string DismissedBetaVersion;
-}
-
 public sealed partial class MainWindow : Window
 {
-    readonly string dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MFG Enabler");
+    readonly string dataDir = AppPaths.DataDir;
     List<Game> games = new();
     DesktopSettings settings = new();
     bool loading = true, busy, updateChecked, initialized, settingsVisible;
     bool retireSpoofOnce;
-    string scanDetails = "", updateDetails = "";
+    string scanDetails = "";
     // DPI-aware window sizing (logical DIPs, NVIDIA-App-like). AppWindow uses
     // physical pixels, so a fixed 1120x780 looks tiny on 150%/200% monitors.
     const double DesiredLogicalWidth = 1120;
@@ -157,6 +147,7 @@ public sealed partial class MainWindow : Window
     async Task InitializeAsync()
     {
         string error = null;
+        bool hadSettings = File.Exists(SettingsFile);
         try
         {
             Directory.CreateDirectory(dataDir);
@@ -177,14 +168,19 @@ public sealed partial class MainWindow : Window
         if (settings.AppChannel != "main" && settings.AppChannel != "beta")
             settings.AppChannel = ReleaseNumber.Parse(AppUpdates.CurrentVersion)?.Beta != null ? "beta" : "main";
         AppChannelCombo.SelectedIndex = settings.AppChannel == "beta" ? 1 : 0;
+        settings.Global ??= new();
+        settings.Global.Normalize();
+        settings.NvidiaGlobal ??= new();
+        settings.NvidiaPrograms = new Dictionary<string, NvidiaOverridePolicy>(settings.NvidiaPrograms ?? new(), StringComparer.OrdinalIgnoreCase);
         ApplyLanguage(); ShowPage(false);
         loading = false;
+        InitializeGlobal();
         if (error != null) await ShowError(error);
         LoadingOverlay.Visibility = Visibility.Visible;
         try { await Scan(); }
         finally { LoadingOverlay.Visibility = Visibility.Collapsed; }
         await UpdateOnce();
-        await CheckAppUpdate(false);
+        if (!Environment.GetCommandLineArgs().Contains("--startup")) { if (hadSettings) await ShowWhatsNewOnce(); await CheckAppUpdate(false); }
     }
     void ApplyLanguage()
     {
@@ -192,7 +188,8 @@ public sealed partial class MainWindow : Window
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(MoreButton, L("More options", "추가 옵션"));
         GraphicsNavText.Text = L("Graphics", "그래픽"); SettingsNavText.Text = L("Settings", "설정");
         PageTitle.Text = settingsVisible ? L("Settings", "설정") : L("Graphics", "그래픽");
-        ProgramTab.Content = L("Program settings", "프로그램 설정"); SettingsTab.Content = L("App settings", "앱 설정");
+        ProgramTab.Content = L("Program settings", "프로그램 설정"); GlobalTab.Content = L("Global settings", "글로벌 설정");
+        ApplyGlobalLanguage();
         Search.PlaceholderText = L("Search programs", "프로그램 검색");
         RefreshButton.Content = RefreshMenu.Text = L("Refresh", "새로 고침");
         NvidiaButton.Content = NvidiaMenu.Text = L("Open NVIDIA App", "NVIDIA App 열기");
@@ -210,9 +207,9 @@ public sealed partial class MainWindow : Window
         GeneralTitle.Text = L("General", "일반"); LanguageLabel.Text = L("Language", "언어");
         UpdatesTitle.Text = L("Updates", "업데이트"); AutoLabel.Text = L("dlssg_for_sm86 automatic updates", "dlssg_for_sm86 자동 업데이트");
         AutoDescription.Text = L("Automatically checks for dlssg_for_sm86 updates.", "자동으로 dlssg_for_sm86 업데이트를 확인합니다.");
-        UpdateDetailsButton.Content = L("Update details", "업데이트 상세");
+        RuntimeNotesButton.Content = L("View dlssg_for_sm86 release notes", "dlssg_for_sm86 릴리스 노트 보기");
         AboutTitle.Text = L("About", "정보");
-         AppVersionText.Text = "MFG-Enabler 1.0b1";
+         AppVersionText.Text = "MFG-Enabler " + AppUpdates.CurrentVersion;
         ApplyAppUpdateLanguage();
         AboutDescription.Text = L("MFG activation tool for RTX 20/30/40 series.", "RTX 20/30/40 시리즈용 mfg 활성화 툴 입니다.");
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(MfgSwitch, MfgLabel.Text);
@@ -220,19 +217,26 @@ public sealed partial class MainWindow : Window
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(LanguageCombo, LanguageLabel.Text);
         LoadingText.Text = L("Loading…", "불러오는 중…");
         ApplyIniLanguage();
+        ApplyNvidiaLanguage();
         RefreshCount(); UpdateState();
     }
     void ShowPage(bool showSettings)
     {
+        GlobalPage.Visibility = Visibility.Collapsed;
+        GraphicsTabs.Visibility = showSettings ? Visibility.Collapsed : Visibility.Visible;
         settingsVisible = showSettings;
         GraphicsRail.Visibility = showSettings ? Visibility.Collapsed : Visibility.Visible;
         SettingsRail.Visibility = showSettings ? Visibility.Visible : Visibility.Collapsed;
         GraphicsPage.Visibility = showSettings ? Visibility.Collapsed : Visibility.Visible;
         SettingsPage.Visibility = showSettings ? Visibility.Visible : Visibility.Collapsed;
         ProgramUnderline.Visibility = showSettings ? Visibility.Collapsed : Visibility.Visible;
-        SettingsUnderline.Visibility = showSettings ? Visibility.Visible : Visibility.Collapsed;
-        GraphicsNav.Foreground = new SolidColorBrush(showSettings ? Colors.LightGray : ColorHelper.FromArgb(255,118,185,0));
-        SettingsNav.Foreground = new SolidColorBrush(showSettings ? ColorHelper.FromArgb(255,118,185,0) : Colors.LightGray);
+        GlobalUnderline.Visibility = Visibility.Collapsed;
+        var graphicsBrush = new SolidColorBrush(showSettings ? Colors.LightGray : ColorHelper.FromArgb(255,118,185,0));
+        var settingsBrush = new SolidColorBrush(showSettings ? ColorHelper.FromArgb(255,118,185,0) : Colors.LightGray);
+        GraphicsNav.Foreground = graphicsBrush;
+        SettingsNav.Foreground = settingsBrush;
+        GraphicsNavIcon.Foreground = GraphicsNavText.Foreground = graphicsBrush;
+        SettingsNavIcon.Foreground = SettingsNavText.Foreground = settingsBrush;
         PageTitle.Text = showSettings ? L("Settings", "설정") : L("Graphics", "그래픽");
     }
     void GraphicsClick(object sender, RoutedEventArgs e) => ShowPage(false);
@@ -260,7 +264,18 @@ public sealed partial class MainWindow : Window
         RefreshCount(); SelectGame();
     }
     void SearchChanged(object sender, TextChangedEventArgs e) { if (!loading) RefreshList(); }
-    void GameChanged(object sender, SelectionChangedEventArgs e) { if (!loading) SelectGame(); }
+    void GameChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (loading) return;
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, SelectGame);
+    }
+    void GameItemPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        if (loading || e.OriginalSource is not DependencyObject current) return;
+        while (current != null && current is not ListViewItem) current = VisualTreeHelper.GetParent(current);
+        if (current is ListViewItem item && item.Content is Game game && !ReferenceEquals(GameList.SelectedItem, game))
+            GameList.SelectedItem = game;
+    }
     void SelectGame()
     {
         loading = true;
@@ -298,9 +313,9 @@ public sealed partial class MainWindow : Window
             string spoof = available ? new Installer(CurrentTarget().Target, true).Status() : "미적용";
             bool eligible = Selected?.CanEnable == true;
             MfgSwitch.IsOn = status == "적용됨";
-            MfgSwitch.IsEnabled = available && (status == "적용됨" || status == "미적용" && eligible);
+            MfgSwitch.IsEnabled = !busy && available && (status == "적용됨" || status == "미적용" && eligible);
             RestoreButton.IsEnabled = !busy && available && Installer.HasAny(CurrentTarget().Target);
-            ProxyCombo.IsEnabled = available && status == "미적용" && eligible;
+            ProxyCombo.IsEnabled = !busy && available && status == "미적용" && eligible;
             FolderButton.IsEnabled = available;
             string ineligibleNote = eligible ? "" : "\n" + (String.IsNullOrEmpty(Selected?.Evidence) ? L("Recovery only. This program is no longer an eligible detected candidate.", "복구 전용 · 현재 감지된 적용 후보가 아닙니다.") : LocalizeCore(Selected.Evidence));
             StateText.Text = available ? "MFG: " + StatusLabel(status) + ineligibleNote :
@@ -308,13 +323,16 @@ public sealed partial class MainWindow : Window
                 L("Choose the rendering executable recorded by NVIDIA App.", "NVIDIA App이 기록한 렌더링 실행 파일을 선택하세요."));
         }
         catch (Exception error) { MfgSwitch.IsEnabled = RestoreButton.IsEnabled = ProxyCombo.IsEnabled = false; StateText.Text = L("Cannot read this target. ", "대상 확인 실패. ") + error.Message; }
-        finally { loading = previous; RefreshIniEditor(); }
+        finally { loading = previous; RefreshIniEditor(); RefreshNvidiaProgram(); }
     }
     void SetBusy(bool value)
     {
         busy = value; GameList.IsEnabled = Search.IsEnabled = ExeCombo.IsEnabled = RefreshButton.IsEnabled = RefreshMenu.IsEnabled = NvidiaButton.IsEnabled = NvidiaMenu.IsEnabled = AutoSwitch.IsEnabled = !value;
-        AppUpdateButton.IsEnabled = AppChannelCombo.IsEnabled = LanguageCombo.IsEnabled = !value;
+        AppUpdateButton.IsEnabled = AppChannelCombo.IsEnabled = LanguageCombo.IsEnabled = RuntimeNotesButton.IsEnabled = !value;
+        GlobalSwitch.IsEnabled = GlobalConfigure.IsEnabled = !value;
+        SetNvidiaBusy(value);
         UpdateState();
+        if (!value) ResumeStorageScan();
     }
     void ProgressText(string text) { }
     string LocalizeCore(string text) => settings.Language == "ko" ? text : CoreText.English(text);
@@ -328,6 +346,7 @@ public sealed partial class MainWindow : Window
             var report = await Task.Run(() => Discovery.Scan());
             games = await Task.Run(() => Discovery.MergeLibrary(saved, report.Games));
             SaveLibrary(); RefreshList();
+            await ApplyGlobalOverrides();
             scanDetails = report.Summary + "\n" + report.StorageFile + "\n" + report.UpdatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
             if (retireSpoofOnce)
             {
@@ -444,13 +463,24 @@ public sealed partial class MainWindow : Window
         {
             bool enable = MfgSwitch.IsOn; var target = CurrentTarget(); var game = Selected;
             string proxy = (string)ProxyCombo.SelectedItem, exe = (string)ExeCombo.SelectedItem;
-            await Run(() => { if (enable) { Discovery.ValidateForEnable(game, exe); Payload.Ensure(proxy, ProgressText); Discovery.ValidateForEnable(game, exe); target.Enable(proxy, Payload.Cache); } else target.Restore(); });
+            if (!enable) ExcludeFromGlobal(game);
+            await Run(() =>
+            {
+                if (enable)
+                {
+                    Discovery.ValidateForEnable(game, exe);
+                    Payload.Ensure(proxy, ProgressText);
+                    Discovery.ValidateForEnable(game, exe);
+                    target.Enable(proxy, Payload.Cache);
+                }
+                else Installer.RestoreAll(target.Target);
+            });
         }
         catch (Exception error) { UpdateState(); await ShowError(error.Message); }
     }
     async void RestoreClick(object sender, RoutedEventArgs e)
     {
-        try { string target = CurrentTarget().Target; await Run(() => Installer.RestoreAll(target)); }
+        try { ExcludeFromGlobal(Selected); string target = CurrentTarget().Target; await Run(() => Installer.RestoreAll(target)); }
         catch (Exception error) { await ShowError(error.Message); }
     }
     async void AutoToggled(object sender, RoutedEventArgs e)
@@ -466,13 +496,21 @@ public sealed partial class MainWindow : Window
         if (busy || (!settings.AutoUpdate && !force) || (updateChecked && !force)) return;
         updateChecked = true; SetBusy(true);
         var known = games.ToList();
+        try { await Task.Run(() => Updates.CheckAndApply(known, ProgressText)); }
+        catch { }
+        finally { SetBusy(false); }
+    }
+    async void RuntimeNotesClick(object sender, RoutedEventArgs e)
+    {
+        if (busy) return;
+        RuntimeNotesButton.IsEnabled = false;
         try
         {
-            var result = await Task.Run(() => Updates.CheckAndApply(known, ProgressText));
-            updateDetails = string.Join("\n", result.Details);
+            var notes = await Task.Run(Updates.FetchReleaseNotes);
+            await ShowDialog("dlssg_for_sm86 " + notes.Version, notes.EnglishText + "\n\n" + notes.Url);
         }
-        catch (Exception error) { updateDetails = error.Message; }
-        finally { SetBusy(false); UpdateDetailsButton.Content = L("Update details", "업데이트 상세"); }
+        catch (Exception error) { await ShowError(error.Message); }
+        finally { RuntimeNotesButton.IsEnabled = !busy; }
     }
     bool dialogOpen;
     async Task ShowDialog(string title, string text)
@@ -486,10 +524,33 @@ public sealed partial class MainWindow : Window
                 Content = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true } } };
             await dialog.ShowAsync();
         }
-        finally { dialogOpen = false; }
+        finally { dialogOpen = false; ResumeStorageScan(); }
     }
     Task ShowError(string error) => ShowDialog(L("Unable to complete the operation", "작업을 완료하지 못했습니다"), LocalizeCore(error));
     async void DetailsClick(object sender, RoutedEventArgs e) => await ShowDialog(L("Detection details", "감지 상세"), LocalizeCore(scanDetails));
-    async void UpdateDetailsClick(object sender, RoutedEventArgs e) => await ShowDialog(L("dlssg_for_sm86 updates", "dlssg_for_sm86 업데이트"), string.IsNullOrEmpty(updateDetails) ? L("Enable automatic updates to check once per launch.", "자동 업데이트를 켜면 실행당 한 번 확인합니다.") : LocalizeCore(updateDetails));
+    async Task ShowWhatsNewOnce()
+    {
+        string version = AppUpdates.CurrentVersion;
+        if (string.Equals(settings.SeenWhatsNewVersion, version, StringComparison.OrdinalIgnoreCase)) return;
+
+        var dialog = new ContentDialog
+        {
+            XamlRoot = Root.XamlRoot,
+            RequestedTheme = ElementTheme.Dark,
+            Title = "What's new · " + version,
+            CloseButtonText = "OK",
+            Content = new TextBlock
+            {
+                Text = "• DX12-only automatic MFG installation by default; Vulkan is opt-in\n• Automatic discovery of new games and a lightweight native tray\n• Separate global / per-game NVIDIA DLSS and MFG controls\n• Verified DLL recovery, runtime INI settings, and English release notes",
+                TextWrapping = TextWrapping.Wrap
+            }
+        };
+        dialogOpen = true;
+        try { await dialog.ShowAsync(); }
+        finally { dialogOpen = false; ResumeStorageScan(); }
+        settings.SeenWhatsNewVersion = version;
+        try { Disk.Save(SettingsFile, settings); } catch { }
+    }
 }
+
 

@@ -17,8 +17,9 @@
     <ApplicationManifest>../src/app.manifest</ApplicationManifest>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <Version>1.2</Version>
-    <AppReleaseVersion Condition="'$(AppReleaseVersion)' == ''">1.2b2</AppReleaseVersion>
+    <Version>1.3.0</Version>
+    <AppReleaseVersion Condition="'$(AppReleaseVersion)' == ''">1.3</AppReleaseVersion>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
     <InformationalVersion>$(AppReleaseVersion)</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
@@ -29,12 +30,24 @@
     <Content Update="Assets/MFG-Enabler.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Update="Assets/MFG-Enabler.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260804001" />
+    <Compile Include="../src/GlobalPolicy.cs" Link="Core/GlobalPolicy.cs" />
+    <Compile Include="../src/GraphicsApi.cs" Link="Core/GraphicsApi.cs" />
+    <Compile Include="../src/GlobalApply.cs" Link="Core/GlobalApply.cs" />
+    <Compile Include="../src/DesktopSettings.cs" Link="Core/DesktopSettings.cs" />
+    <Compile Include="../src/AppPaths.cs" Link="Core/AppPaths.cs" />
+    <Compile Include="../src/BackgroundApply.cs" Link="Core/BackgroundApply.cs" />
+    <Compile Include="../src/NvidiaOverrides.cs" Link="Core/NvidiaOverrides.cs" />
     <Compile Include="../src/Core.cs" Link="Core/Core.cs" />
+    <Compile Include="../src/Installer.cs" Link="Core/Installer.cs" />
+    <Compile Include="../src/Payload.cs" Link="Core/Payload.cs" />
+    <Compile Include="../src/RuntimeModels.cs" Link="Core/RuntimeModels.cs" />
     <Compile Include="../src/RuntimeIni.cs" Link="Core/RuntimeIni.cs" />
+    <Compile Include="../src/RuntimeIniSettings.cs" Link="Core/RuntimeIniSettings.cs" />
     <Compile Include="../src/Discovery.cs" Link="Core/Discovery.cs" />
     <Compile Include="../src/Updates.cs" Link="Core/Updates.cs" />
     <Compile Include="../src/AppUpdates.cs" Link="Core/AppUpdates.cs" />
     <EmbeddedResource Include="../src/app-update.ps1" LogicalName="app-update.ps1" />
     <EmbeddedResource Include="../src/payload.lock" LogicalName="payload.lock" />
+    <PackageReference Include="NvAPIWrapper.Net" Version="0.8.1.101" />
   </ItemGroup>
 </Project>

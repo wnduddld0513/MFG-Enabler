@@ -1,92 +1,243 @@
-using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
 using MfgEnabler;
 
-string sandbox=Path.Combine(Path.GetTempPath(),"MFG-payload-tests-"+Guid.NewGuid().ToString("N"));
-Updates.DataRoot=Path.Combine(sandbox,"cache");Directory.CreateDirectory(Updates.DataRoot);
-int checks=0;
-void Check(bool ok,string label){if(!ok)throw new Exception(label);checks++;Console.WriteLine("PASS "+label);}
-void Reject(Action action,string label){bool rejected=false;try{action();}catch(IOException){rejected=true;}Check(rejected,label);}
-byte[] ini=Encoding.UTF8.GetBytes("[General]\nEnabled=1\n[FrameGeneration]\nOptimized=1\nMaxGeneratedFrames=3\n[Logging]\nDirectory=dlssg_sm86\\logs\n");
-byte[] Dll(byte marker){var b=new byte[128];b[0]=0x4d;b[1]=0x5a;b[0x3c]=64;b[64]=0x50;b[65]=0x45;b[68]=0x64;b[69]=0x86;b[100]=marker;return b;}
-RuntimePackage Package(char revision,byte marker)=>new(){Channel=Updates.Channel,Version="0.3.4",Revision=new string(revision,40),Files=Payload.Proxies.Concat(new[]{"dlssg_sm86.ini"}).Select(n=>{var b=n.EndsWith(".dll")?Dll(marker):ini;return new PackageFile{Name=n,Path=Updates.RemotePath(n),Hash=Disk.HashBytes(b),Blob=Updates.GitBlob(b)};}).ToList()};
-string Stage(RuntimePackage p,byte marker){string s=Path.Combine(Updates.DataRoot,".stage-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(s);foreach(var f in p.Files)File.WriteAllBytes(Path.Combine(s,f.Name),f.Name.EndsWith(".dll")?Dll(marker):ini);return s;}
-string Game(string name){string path=Path.Combine(sandbox,name);Directory.CreateDirectory(path);return path;}
-void Legacy(string game,string proxy,byte[] original,byte[] installed,string version="0.2.4"){
- var i=new Installer(game);Directory.CreateDirectory(i.Store);File.WriteAllBytes(Path.Combine(game,proxy),installed);File.WriteAllBytes(Path.Combine(game,"dlssg_sm86.ini"),ini);
- var j=new Journal{Target=game,Phase="enabled",Proxy=proxy,RuntimeVersion=version,RuntimeRevision=new string('c',40)};
- var e=new Entry{Name=proxy,Original=original==null?null:Disk.HashBytes(original),Installed=Disk.HashBytes(installed),Backup="original.bak"};
- if(original!=null)File.WriteAllBytes(Path.Combine(i.Store,e.Backup),original);j.Files.Add(e);
- j.Files.Add(new Entry{Name="dlssg_sm86.ini",Installed=Disk.HashBytes(ini),Backup="ini.bak"});Disk.Save(Path.Combine(i.Store,"state.json"),j);
+string sandbox = Path.Combine(Path.GetTempPath(), "MFG-runtime-tests-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(sandbox);
+int checks = 0;
+byte[] stockIni = Encoding.UTF8.GetBytes("[FrameGeneration]\r\nOptimized=1\r\nMaxGeneratedFrames=3\r\n");
+void Check(bool ok, string name)
+{
+    if (!ok) throw new Exception(name);
+    checks++;
+    Console.WriteLine("PASS " + name);
 }
-void Logs(string game){Directory.CreateDirectory(Path.Combine(game,"dlssg_sm86","logs"));File.WriteAllText(Path.Combine(game,"dlssg_sm86","logs","loader_123.jsonl"),"log");File.WriteAllText(Path.Combine(game,"dlssg_sm86.log"),"legacy log");}
-void Zip(string path,RuntimePackage p,byte marker,string extra=null,bool missing=false){using var z=ZipFile.Open(path,ZipArchiveMode.Create);foreach(var f in p.Files.Where(f=>!missing||f.Name!="dbghelp.dll")){using var s=z.CreateEntry("source/"+f.Path).Open();s.Write(f.Name.EndsWith(".dll")?Dll(marker):ini);}if(extra!=null){using var s=z.CreateEntry(extra).Open();s.Write(Dll(marker));}}
-try {
- var p=Package('a',1);Updates.Publish(p,Stage(p,1));
- Check(Updates.Current().Revision==p.Revision,"publish seven-file package in fixed owner cache");
- Check(Payload.Proxies.Length==6&&!Payload.Proxies.Contains("winhttp.dll")&&Payload.Proxies.Contains("dbghelp.dll"),"new alternative DLL list");
- byte[] original=Encoding.UTF8.GetBytes("original game DLL"),unrelated=Encoding.UTF8.GetBytes("other DLL");
- string game=Game("fresh");File.WriteAllBytes(Path.Combine(game,"version.dll"),original);File.WriteAllBytes(Path.Combine(game,"nvngx_dlssg.dll"),unrelated);
- var installer=new Installer(game);installer.Enable("version.dll",Updates.DirectoryFor(p));
- var journal=installer.Load();Check(File.ReadAllBytes(Path.Combine(installer.Store,journal.Files[0].Backup)).SequenceEqual(original),"pre-existing original DLL backed up inside .mfg-enabler");
- File.WriteAllText(Path.Combine(game,"dlssg_sm86.ini"),"user edited INI");Logs(game);installer.Restore();
- Check(File.ReadAllBytes(Path.Combine(game,"version.dll")).SequenceEqual(original),"restore original DLL byte-for-byte");
- Check(!File.Exists(Path.Combine(game,"dlssg_sm86.ini"))&&!Directory.Exists(Path.Combine(game,"dlssg_sm86"))&&!File.Exists(Path.Combine(game,"dlssg_sm86.log")),"restore deletes edited INI and runtime logs");
- Check(File.ReadAllBytes(Path.Combine(game,"nvngx_dlssg.dll")).SequenceEqual(unrelated)&&Directory.Exists(installer.Store),"restore preserves unrelated DLL and recovery backups");
- installer.Restore();Check(installer.Status()=="미적용","restore can be repeated");
- File.WriteAllText(Path.Combine(game,"dlssg_sm86.ini"),"left by old restore");Logs(game);Check(Installer.HasAny(game),"disabled legacy journal with leftovers still enables recovery");installer.Restore();Check(!Installer.HasAny(game),"legacy disabled state cleanup");
- var config=RuntimeIni.Read(ini);Check(config.Optimized==1&&config.MaxGeneratedFrames==3&&config.Preset=="Auto"&&config.LogLevel==1,"new runtime INI factory fields");
- var custom=new RuntimeIniSettings{Optimized=2,MaxGeneratedFrames=5,Preset="B",LogLevel=3};
- byte[] annotated=Encoding.UTF8.GetBytes("; keep heading\r\n[FrameGeneration]\r\nOptimized=1 ; keep tier comment\r\nMaxGeneratedFrames=3\r\nForceGeneratedFrames=0\r\n[Compatibility]\r\nPreset=Auto\r\n[Logging]\r\nLevel=1\r\nDirectory=custom-logs\r\n[Custom]\r\nKeep=yes\r\n");
- byte[] edited=RuntimeIni.Apply(annotated,custom);var parsed=RuntimeIni.Read(edited);string editedText=Encoding.UTF8.GetString(edited);
- Check(parsed.Optimized==2&&parsed.MaxGeneratedFrames==5&&parsed.Preset=="B"&&parsed.LogLevel==3,"editor round trips all four supported settings");
- Check(editedText.Contains("; keep heading")&&editedText.Contains("; keep tier comment")&&editedText.Contains("ForceGeneratedFrames=0")&&editedText.Contains("Directory=custom-logs")&&editedText.Contains("Keep=yes")&&editedText.Contains("\r\n"),"editor preserves comments, advanced keys, paths and CRLF");
- Check(RuntimeIni.Read(RuntimeIni.Apply(Encoding.UTF8.GetBytes("[General]\nEnabled=1\n"),custom)).MaxGeneratedFrames==5,"editor adds missing sections and keys");
- Check(RuntimeIni.Read(Encoding.UTF8.GetBytes("[Compatibility]\nOptimizedKernels=2\n")).Optimized==2,"editor reads upstream legacy optimization alias");
- Check(RuntimeIni.Read(Encoding.UTF8.GetBytes("[Compatibility]\nOptimizedKernels=2\n[FrameGeneration]\nOptimized=1\n")).Optimized==1,"canonical optimization key takes precedence");
- foreach(int tier in new[]{0,1,2,3})foreach(int frames in new[]{0,1,2,3,4,5}){var v=RuntimeIni.Read(RuntimeIni.Apply(ini,new RuntimeIniSettings{Optimized=tier,MaxGeneratedFrames=frames}));if(v.Optimized!=tier||v.MaxGeneratedFrames!=frames)throw new Exception("value mapping");}Check(true,"all optimization and generated-frame values map exactly");
- Reject(()=>RuntimeIni.Apply(ini,new RuntimeIniSettings{Optimized=4}),"invalid optimization tier rejected");Reject(()=>RuntimeIni.Apply(ini,new RuntimeIniSettings{MaxGeneratedFrames=6}),"invalid generated-frame ceiling rejected");Reject(()=>RuntimeIni.Apply(ini,new RuntimeIniSettings{Preset="invalid"}),"invalid render preset rejected");Reject(()=>RuntimeIni.Apply(ini,new RuntimeIniSettings{LogLevel=-1}),"invalid log level rejected");
- byte[] duplicate=Encoding.UTF8.GetBytes("[FrameGeneration]\nOptimized=1\noptimized=3\n");Reject(()=>RuntimeIni.Read(duplicate),"ambiguous duplicate setting rejected on read");Check(RuntimeIni.Read(RuntimeIni.Apply(duplicate,custom)).Optimized==2,"saving normalizes duplicate supported keys");
- string editorGame=Game("editor");File.WriteAllText(Path.Combine(editorGame,"version.dll"),"editor original DLL");var editor=new Installer(editorGame);editor.Enable("version.dll",Updates.DirectoryFor(p));var oldBackup=editor.Load().Files.Single(e=>e.Name=="version.dll");string originalBackupHash=Disk.Hash(Path.Combine(editor.Store,oldBackup.Backup));
- editor.SaveIniSettings(custom);Check(editor.Status()=="적용됨"&&editor.ReadIniSettings().MaxGeneratedFrames==5,"saving installed INI updates journal hash and keeps Applied state");
- Check(Disk.Hash(Path.Combine(editor.Store,oldBackup.Backup))==originalBackupHash&&Disk.Hash(Path.Combine(editorGame,"version.dll"))==Disk.HashBytes(Dll(1)),"INI edit leaves DLL and original backup unchanged");
- byte[] beforeFailure=File.ReadAllBytes(Path.Combine(editorGame,"dlssg_sm86.ini"));string beforeJournal=File.ReadAllText(Path.Combine(editor.Store,"state.json"));editor.Fault=_=>throw new IOException("INI journal save fault");Reject(()=>editor.SaveIniSettings(new RuntimeIniSettings()),"failed INI save rolls back file");editor.Fault=null;
- Check(File.ReadAllBytes(Path.Combine(editorGame,"dlssg_sm86.ini")).SequenceEqual(beforeFailure)&&File.ReadAllText(Path.Combine(editor.Store,"state.json"))==beforeJournal,"INI save rollback preserves file and recovery metadata");
- editor.Upgrade(p);Check(editor.ReadIniSettings().Optimized==1&&editor.ReadIniSettings().MaxGeneratedFrames==3,"runtime replacement resets edited INI to factory settings");
- editor.SaveIniSettings(custom);editor.Restore();Check(!File.Exists(Path.Combine(editorGame,"dlssg_sm86.ini"))&&File.ReadAllText(Path.Combine(editorGame,"version.dll"))=="editor original DLL","restore after INI edits removes INI and restores original DLL");
- Reject(()=>editor.SaveIniSettings(custom),"INI editing is blocked after restore");
- string oldEditorGame=Game("old-editor");Legacy(oldEditorGame,"version.dll",null,Dll(9),"310.9.1.9");Reject(()=>new Installer(oldEditorGame).SaveIniSettings(custom),"retired runtime cannot use the new editor");
- string noOriginal=Game("no-original");var fresh=new Installer(noOriginal);fresh.Enable("dxgi.dll",Updates.DirectoryFor(p));fresh.Restore();Check(!File.Exists(Path.Combine(noOriginal,"dxgi.dll")),"no original DLL means remove installed proxy");
- foreach(string proxy in new[]{"version.dll","winhttp.dll"}){
-  string g=Game("legacy-"+proxy);Legacy(g,proxy,original,Dll(9),proxy=="version.dll"?"310.9.1.9":"0.2.4");Logs(g);File.WriteAllText(Path.Combine(g,"dlssg_sm86.ini"),"edited old INI");
-  var upgrade=new Installer(g);upgrade.Upgrade(p);var j=upgrade.Load();string selected=proxy=="winhttp.dll"?"version.dll":proxy;
-  Check(j.Proxy==selected&&j.RuntimeVersion=="0.3.4"&&File.ReadAllBytes(Path.Combine(g,selected)).SequenceEqual(Dll(1)),"restore then install 0.3.4 from "+proxy);
-  if(proxy=="winhttp.dll")Check(File.ReadAllBytes(Path.Combine(g,proxy)).SequenceEqual(original),"retired winhttp original restored before proxy migration");
-  else Check(File.ReadAllBytes(Path.Combine(upgrade.Store,j.Files.Single(e=>e.Name==proxy).Backup)).SequenceEqual(original),"upgrade backs up original, not the previous mod");
-  Check(!Directory.Exists(Path.Combine(g,"dlssg_sm86")),"upgrade clears previous logs");upgrade.Restore();
-  Check(File.ReadAllBytes(Path.Combine(g,proxy)).SequenceEqual(original)&&!File.Exists(Path.Combine(g,"dlssg_sm86.ini")),"post-upgrade restore returns original game");
- }
- string corruptGame=Game("corrupt-backup");Legacy(corruptGame,"version.dll",original,Dll(9));var corrupt=new Installer(corruptGame);File.WriteAllText(Path.Combine(corrupt.Store,"original.bak"),"bad");Reject(()=>corrupt.Upgrade(p),"corrupt original backup prevents upgrade");Check(File.ReadAllBytes(Path.Combine(corruptGame,"version.dll")).SequenceEqual(Dll(9)),"backup failure leaves installed DLL untouched");
- string changedGame=Game("changed-dll");Legacy(changedGame,"version.dll",original,Dll(9));File.WriteAllBytes(Path.Combine(changedGame,"version.dll"),Dll(8));Reject(()=>new Installer(changedGame).Restore(),"unexpected external DLL changes are preserved");
- string failureGame=Game("install-failure");Legacy(failureGame,"version.dll",original,Dll(9));var failure=new Installer(failureGame);int steps=0;failure.Fault=_=>{if(++steps==3)throw new IOException("injected new install failure");};Reject(()=>failure.Upgrade(p),"new installation failure rolls back after restore");Check(File.ReadAllBytes(Path.Combine(failureGame,"version.dll")).SequenceEqual(original)&&failure.Load().Phase=="disabled","failed upgrade leaves original DLL recoverably restored");
- string interruptedGame=Game("interrupted-restore");Legacy(interruptedGame,"version.dll",original,Dll(9));var interrupted=new Installer(interruptedGame);interrupted.Fault=_=>throw new IOException("interruption");Reject(interrupted.Restore,"interrupted restoration recorded");interrupted.Fault=null;interrupted.Restore();Check(interrupted.Load().Phase=="disabled"&&!File.Exists(Path.Combine(interruptedGame,"dlssg_sm86.ini")),"restore resumes after interruption");
- string linkGame=Game("linked-logs"),outside=Game("outside");Legacy(linkGame,"version.dll",original,Dll(9));File.WriteAllText(Path.Combine(outside,"keep.txt"),"keep");Directory.CreateDirectory(Path.Combine(linkGame,"dlssg_sm86"));
- try {var linkStart=new ProcessStartInfo("cmd.exe"){UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true}; foreach(string arg in new[]{"/c","mklink","/J",Path.Combine(linkGame,"dlssg_sm86","logs"),outside})linkStart.ArgumentList.Add(arg); using(var proc=Process.Start(linkStart)){proc.WaitForExit();if(proc.ExitCode!=0)throw new Exception("Cannot create junction fixture: "+proc.StandardError.ReadToEnd());}Reject(()=>new Installer(linkGame).Restore(),"log cleanup rejects symlink before changing DLL");Check(File.Exists(Path.Combine(outside,"keep.txt"))&&File.ReadAllBytes(Path.Combine(linkGame,"version.dll")).SequenceEqual(Dll(9)),"linked directory and game remain untouched");Directory.Delete(Path.Combine(linkGame,"dlssg_sm86","logs"));}catch(UnauthorizedAccessException){Console.WriteLine("SKIP symlink fixture requires privilege");}
- string zip=Path.Combine(sandbox,"valid.zip");Zip(zip,p,1);string extracted=Path.Combine(sandbox,"extracted");Directory.CreateDirectory(extracted);Updates.ExtractSourceArchive(p,zip,extracted);Check(Directory.GetFiles(extracted).Length==7,"source ZIP extracts only seven required files");
- foreach(var test in new[]{("missing",(string)null,true),("duplicate","source/version.dll",false),("other-root","other/version.dll",false)}){string z=Path.Combine(sandbox,test.Item1+".zip"),stage=Path.Combine(sandbox,test.Item1);Directory.CreateDirectory(stage);Zip(z,p,1,test.Item2,test.Item3);Reject(()=>Updates.ExtractSourceArchive(p,z,stage),"reject "+test.Item1+" archive");}
- string badZip=Path.Combine(sandbox,"bad.zip"),badStage=Path.Combine(sandbox,"bad-stage");Directory.CreateDirectory(badStage);Zip(badZip,p,2);Reject(()=>Updates.ExtractSourceArchive(p,badZip,badStage),"reject altered source ZIP DLL hash");
- var next=Package('d',2);Reject(()=>Updates.Publish(next,Stage(next,1)),"corrupt staged package never replaces active cache");Check(Updates.Current().Revision==p.Revision,"failed cache validation retains active metadata");
- File.Delete(Path.Combine(Updates.DataRoot,"sdli1995.json"));Directory.CreateDirectory(Path.Combine(Updates.DataRoot,"sdli1995.json"));Reject(()=>Updates.Publish(next,Stage(next,2)),"metadata write failure rolls back published folder");Check(Updates.Current().Revision==p.Revision&&File.ReadAllBytes(Updates.FileFor(p,"version.dll")).SequenceEqual(Dll(1)),"cache rollback retains previous binaries");Directory.Delete(Path.Combine(Updates.DataRoot,"sdli1995.json"));
- Updates.Publish(next,Stage(next,2));Check(Updates.Current().Revision==next.Revision,"successful cache update replaces fixed folder");
- Disk.Save(Path.Combine(Updates.DataRoot,"active.json"),new RuntimePackage{Channel="retired",Version="310.9.1.9"});Check(Updates.Current().Revision==Payload.Revision,"retired channel metadata migrates to supported baseline");
- if(args.Length==2&&args[0]=="--source-zip"){
-  var baseline=Payload.Baseline();string stage=Path.Combine(sandbox,"real-source");Directory.CreateDirectory(stage);Updates.ExtractSourceArchive(baseline,args[1],stage);Updates.Publish(baseline,stage);Check(Updates.Current().Version=="0.3.4","real 0.3.4 ZIP passes blob hashes, SHA-256, x64 and layout checks");
- }
- if(args.Contains("--live")){
-  Updates.DataRoot=Path.Combine(sandbox,"live-cache");var downloaded=Updates.FetchLatest(Payload.Baseline(),Console.WriteLine);Check(downloaded.Version=="0.3.4"&&downloaded.Files.Count==7,"live GitHub release source ZIP download and publish");
- }
- Console.WriteLine($"PASS all {checks} payload checks; fixtures: {sandbox}");
-} finally {
- // Retain fixtures for diagnosis; no recursive cleanup of potentially linked test paths.
+void Reject(Action action, string name)
+{
+    try { action(); }
+    catch (IOException) { Check(true, name); return; }
+    throw new Exception("Expected rejection: " + name);
 }
+byte[] Pe(byte marker, bool x64 = true)
+{
+    byte[] bytes = new byte[128];
+    using var writer = new BinaryWriter(new MemoryStream(bytes));
+    writer.Write((ushort)0x5a4d);
+    writer.BaseStream.Position = 0x3c; writer.Write(64);
+    writer.BaseStream.Position = 64; writer.Write(0x4550); writer.Write((ushort)(x64 ? 0x8664 : 0x14c));
+    bytes[^1] = marker;
+    return bytes;
+}
+RuntimePackage Package(byte marker = 1, string version = "0.3.4")
+{
+    return new RuntimePackage {
+        Version = version, Revision = new string(marker == 1 ? 'a' : 'b', 40), Channel = Updates.Channel,
+        Files = Payload.Proxies.Append("dlssg_sm86.ini").Select(name => {
+            byte[] bytes = name.EndsWith(".ini") ? stockIni : Pe(marker);
+            return new PackageFile { Name = name, Path = Updates.RemotePath(name), Hash = Disk.HashBytes(bytes), Blob = Updates.GitBlob(bytes) };
+        }).ToList()
+    };
+}
+string Cache(RuntimePackage p, byte marker = 1)
+{
+    string directory = Updates.DirectoryFor(p);
+    Directory.CreateDirectory(directory);
+    foreach (var file in p.Files) File.WriteAllBytes(Path.Combine(directory, file.Name), file.Name.EndsWith(".ini") ? stockIni : Pe(marker));
+    Disk.Save(Path.Combine(Updates.DataRoot, "active.json"), p);
+    return directory;
+}
+(Installer Installer, RuntimePackage Package) Fixture(string name, bool original = true, bool install = true)
+{
+    string root = Path.Combine(sandbox, name);
+    Directory.CreateDirectory(root);
+    Updates.DataRoot = Path.Combine(root, "cache");
+    var p = Package(); Cache(p);
+    string game = Path.Combine(root, "game"); Directory.CreateDirectory(game);
+    File.WriteAllText(Path.Combine(game, "game.exe"), "fixture only");
+    File.WriteAllText(Path.Combine(game, "keep.txt"), "user data");
+    if (original) File.WriteAllBytes(Path.Combine(game, "version.dll"), Pe(99));
+    var installer = new Installer(game);
+    if (install) installer.Enable("version.dll", Updates.DirectoryFor(p));
+    return (installer, p);
+}
+bool Original(Installer i) => File.ReadAllBytes(Path.Combine(i.Target, "version.dll")).SequenceEqual(Pe(99));
+void Clean(Installer i, string name)
+{
+    Check(!Directory.Exists(i.Store) && !File.Exists(Path.Combine(i.Target, "dlssg_sm86.ini"))
+        && File.ReadAllText(Path.Combine(i.Target, "keep.txt")) == "user data", name);
+}
+
+Updates.Validate(Payload.Baseline());
+Check(Payload.Proxies.Length == 6 && !Payload.Proxies.Contains("winhttp.dll"), "Single-runtime baseline and proxy set");
+var defaults = RuntimeIni.Read(stockIni);
+Check(defaults.Optimized == 1 && defaults.MaxGeneratedFrames == 3 && defaults.Preset == "Auto" && defaults.LogLevel == 1, "Factory INI defaults");
+Check(RuntimeIni.Read(Encoding.UTF8.GetBytes("[Compatibility]\nOptimizedKernels=2\n")).Optimized == 2, "Legacy optimization alias");
+Check(RuntimeIni.Read(Encoding.UTF8.GetBytes("[General]\nEnabled=1\n")).Optimized == 0, "Missing optimization follows runtime tier zero");
+string custom = "[FrameGeneration]\r\nOptimized=1 ; keep comment\r\nMaxGeneratedFrames=3\r\n[Runtime]\r\nCacheDirectory=custom\\cache\r\n[Logging]\r\nDirectory=custom\\logs\r\n";
+byte[] changed = RuntimeIni.Apply(Encoding.UTF8.GetBytes(custom), new RuntimeIniSettings { Optimized = 3, MaxGeneratedFrames = 5, Preset = "B", LogLevel = 2 });
+var settings = RuntimeIni.Read(changed);
+Check(settings.Optimized == 3 && settings.MaxGeneratedFrames == 5 && settings.Preset == "B" && settings.LogLevel == 2, "Four settings round trip");
+Check(Encoding.UTF8.GetString(changed).Contains("; keep comment\r\n") && Encoding.UTF8.GetString(changed).Contains("CacheDirectory=custom\\cache"), "Keep comments, custom keys and CRLF");
+Reject(() => RuntimeIni.Read(Encoding.UTF8.GetBytes("[FrameGeneration]\nOptimized=1\nOptimized=2")), "Reject ambiguous duplicate values");
+Reject(() => RuntimeIni.Read(Encoding.UTF8.GetBytes("[FrameGeneration]\nMaxGeneratedFrames=99")), "Reject unsupported frame count");
+Reject(() => RuntimeIni.Apply(stockIni, new RuntimeIniSettings { Optimized = 4 }), "Reject unsupported tier");
+Reject(() => RuntimeIni.Apply(stockIni, new RuntimeIniSettings { Preset = "C" }), "Reject unsupported preset");
+Reject(() => RuntimeIni.Read(new byte[] { 0xff }), "Reject invalid INI encoding");
+
+var f = Fixture("original");
+Check(OriginalBackup(f.Installer), "Original DLL stored as version.backup");
+bool OriginalBackup(Installer i) => File.ReadAllBytes(Path.Combine(i.Store, "version.backup")).SequenceEqual(Pe(99));
+f.Installer.SaveIniSettings(new RuntimeIniSettings { Optimized = 2, MaxGeneratedFrames = 5 });
+Check(f.Installer.ReadIniSettings().Optimized == 2 && f.Installer.Status() == "적용됨" && OriginalBackup(f.Installer), "Save game INI and journal without changing DLL backup");
+byte[] beforeSave = File.ReadAllBytes(Path.Combine(f.Installer.Target, "dlssg_sm86.ini"));
+f.Installer.Fault = _ => throw new IOException("injected save fault");
+Reject(() => f.Installer.SaveIniSettings(new RuntimeIniSettings()), "INI save failure is reported");
+Check(beforeSave.SequenceEqual(File.ReadAllBytes(Path.Combine(f.Installer.Target, "dlssg_sm86.ini"))) && f.Installer.Status() == "적용됨", "INI save rollback preserves matching journal");
+f.Installer.Fault = null;
+File.WriteAllText(Path.Combine(f.Installer.Target, "dlssg_sm86.ini"), "manually edited");
+Directory.CreateDirectory(Path.Combine(f.Installer.Target, "dlssg_sm86", "logs", "nested"));
+File.WriteAllText(Path.Combine(f.Installer.Target, "dlssg_sm86", "logs", "nested", "loader.jsonl"), "log");
+File.WriteAllText(Path.Combine(f.Installer.Target, "dlssg_sm86_loader.log"), "old log");
+f.Installer.Restore();
+Check(Original(f.Installer) && !Directory.Exists(Path.Combine(f.Installer.Target, "dlssg_sm86")), "Restore original DLL and clean runtime logs");
+Clean(f.Installer, "Delete edited INI and recovery store after success");
+f.Installer.Restore(); Check(!Installer.HasAny(f.Installer.Target), "Repeat restore is harmless");
+
+f = Fixture("no-original", false); f.Installer.Restore();
+Check(!File.Exists(Path.Combine(f.Installer.Target, "version.dll")), "Remove injected DLL when no original existed");
+Clean(f.Installer, "Clean first-time installation");
+f = Fixture("preexisting-ini", install: false);
+File.WriteAllText(Path.Combine(f.Installer.Target, "dlssg_sm86.ini"), "old settings");
+f.Installer.Enable("version.dll", Updates.DirectoryFor(f.Package)); f.Installer.Restore();
+Clean(f.Installer, "Delete pre-existing runtime INI on restore as requested");
+
+f = Fixture("restore-order");
+var journal = f.Installer.Load(); journal.Files.Reverse(); Disk.Save(Path.Combine(f.Installer.Store, "state.json"), journal);
+f.Installer.Fault = step => { if (step == 1) {
+    Check(Original(f.Installer) && File.Exists(Path.Combine(f.Installer.Target, "dlssg_sm86.ini")) && OriginalBackup(f.Installer), "DLL restored before INI or backups, independent of journal order");
+    throw new IOException("injected restore fault");
+} };
+Reject(f.Installer.Restore, "Interrupted restore retains recovery journal");
+f.Installer.Fault = null; f.Installer.Restore(); Clean(f.Installer, "Retry interrupted restore completes cleanup");
+f = Fixture("install-fault", install: false);
+int faults = 0; f.Installer.Fault = _ => { if (++faults == 1) throw new IOException("injected install fault"); };
+Reject(() => f.Installer.Enable("version.dll", Updates.DirectoryFor(f.Package)), "Installation fault is reported");
+Check(Original(f.Installer), "Installation rollback restores original DLL"); Clean(f.Installer, "Installation rollback removes owned files");
+
+f = Fixture("tampered-dll"); File.WriteAllText(Path.Combine(f.Installer.Target, "version.dll"), "other mod");
+Reject(f.Installer.Restore, "Refuse to overwrite an externally changed DLL");
+Check(OriginalBackup(f.Installer) && File.Exists(Path.Combine(f.Installer.Target, "dlssg_sm86.ini")), "Preserve backup and INI on refused restore");
+f = Fixture("tampered-backup"); File.WriteAllText(Path.Combine(f.Installer.Store, "version.backup"), "damaged");
+Reject(f.Installer.Restore, "Reject damaged original backup before changing game files");
+f = Fixture("missing-backup"); File.Delete(Path.Combine(f.Installer.Store, "version.backup"));
+Reject(f.Installer.Restore, "Reject missing original backup");
+f = Fixture("blocked-install", install: false); Directory.CreateDirectory(Path.Combine(f.Installer.Target, "dlssg_sm86.ini"));
+Reject(() => f.Installer.Enable("version.dll", Updates.DirectoryFor(f.Package)), "Check all installation destinations before writing");
+Check(Original(f.Installer) && !Directory.Exists(f.Installer.Store), "Failed preflight does not leave backups");
+
+f = Fixture("unknown-store-file"); File.WriteAllText(Path.Combine(f.Installer.Store, "keep.txt"), "unknown");
+Reject(f.Installer.Restore, "Preserve unknown recovery-store files");
+Check(Original(f.Installer) && OriginalBackup(f.Installer), "Keep original backup until store cleanup can complete");
+File.Delete(Path.Combine(f.Installer.Store, "keep.txt")); f.Installer.Restore(); Clean(f.Installer, "Retry cleanup from disabled journal");
+f = Fixture("legacy-backup"); journal = f.Installer.Load();
+var dllEntry = journal.Files.Single(e => e.Name == "version.dll");
+string oldBackup = Guid.NewGuid().ToString("N") + ".bak";
+File.Move(Path.Combine(f.Installer.Store, dllEntry.Backup), Path.Combine(f.Installer.Store, oldBackup)); dllEntry.Backup = oldBackup;
+Disk.Save(Path.Combine(f.Installer.Store, "state.json"), journal);
+File.WriteAllText(Path.Combine(f.Installer.Store, Guid.NewGuid().ToString("N") + ".upg"), "old upgrade scratch");
+f.Installer.Restore(); Check(Original(f.Installer), "Read old GUID backup names"); Clean(f.Installer, "Clean legacy backup and upgrade records");
+
+f = Fixture("upgrade"); f.Installer.SaveIniSettings(new RuntimeIniSettings { Optimized = 3 });
+var next = Package(2, "0.3.5"); Cache(next, 2); f.Installer.Upgrade(next);
+Check(f.Installer.Load().RuntimeVersion == "0.3.5" && OriginalBackup(f.Installer) && f.Installer.ReadIniSettings().Optimized == 1, "Upgrade restores then installs and resets INI");
+f.Installer.Restore(); Check(Original(f.Installer), "Upgrade preserves true original DLL"); Clean(f.Installer, "Restore after upgrade cleans game directory");
+f = Fixture("invalid-upgrade"); next = Package(2, "0.3.5"); Cache(next, 2);
+File.WriteAllText(Updates.FileFor(next, "version.dll"), "corrupt");
+Reject(() => f.Installer.Upgrade(next), "Validate new runtime before restoring old installation");
+Check(f.Installer.Status() == "적용됨" && OriginalBackup(f.Installer), "Bad download leaves installed game unchanged");
+f = Fixture("legacy-winhttp"); journal = f.Installer.Load(); dllEntry = journal.Files.Single(e => e.Name == "version.dll");
+File.Move(Path.Combine(f.Installer.Target, "version.dll"), Path.Combine(f.Installer.Target, "winhttp.dll"));
+dllEntry.Name = journal.Proxy = "winhttp.dll"; journal.RuntimeVersion = "0.2.4";
+Disk.Save(Path.Combine(f.Installer.Store, "state.json"), journal);
+next = Package(2, "0.3.5"); Cache(next, 2); f.Installer.Upgrade(next);
+Check(f.Installer.Load().Proxy == "version.dll" && File.ReadAllBytes(Path.Combine(f.Installer.Target, "winhttp.dll")).SequenceEqual(Pe(99)), "Migrate old winhttp installation after restoring its original");
+f.Installer.Restore(); Clean(f.Installer, "Clean migrated installation");
+
+string Archive(RuntimePackage p, string scenario)
+{
+    string path = Path.Combine(sandbox, scenario + ".zip");
+    using var zip = ZipFile.Open(path, ZipArchiveMode.Create);
+    foreach (var file in p.Files)
+    {
+        if (scenario == "missing" && file.Name == "version.dll") continue;
+        var entry = zip.CreateEntry("source/" + file.Path);
+        if (scenario == "symlink" && file.Name == "version.dll") entry.ExternalAttributes = 0xA000 << 16;
+        using var output = entry.Open();
+        output.Write(file.Name.EndsWith(".ini") ? stockIni : Pe(scenario == "corrupt" ? (byte)2 : (byte)1));
+    }
+    if (scenario == "duplicate") { using var output = zip.CreateEntry("source/version.dll").Open(); output.Write(Pe(1)); }
+    using (var output = zip.CreateEntry("source/../../outside.txt").Open()) output.Write(Encoding.UTF8.GetBytes("irrelevant"));
+    return path;
+}
+Updates.DataRoot = Path.Combine(sandbox, "archive-cache");
+foreach (string scenario in new[] { "valid", "missing", "corrupt", "symlink", "duplicate" })
+{
+    var p = Package(); string zip = Archive(p, scenario); string stage = Path.Combine(Updates.DataRoot, scenario); Directory.CreateDirectory(stage);
+    if (scenario == "valid") {
+        Updates.ExtractSourceArchive(p, zip, stage);
+        Check(Directory.GetFiles(stage).Length == 7 && !File.Exists(Path.Combine(Updates.DataRoot, "outside.txt")), "Extract only seven verified runtime files");
+        Updates.Publish(p, stage); Check(Updates.Current().Revision == p.Revision, "Publish verified cache and metadata");
+    }
+    else Reject(() => Updates.ExtractSourceArchive(p, zip, stage), "Reject archive " + scenario);
+}
+
+var policy = new GlobalPolicy();
+var detectedGame = new Game { NvidiaId = "42", Root = "C:/fixture", Exe = "C:/fixture/game.exe", CanEnable = true, Api = GraphicsApi.DirectX12 };
+Check(!policy.Allows(detectedGame), "Global override is opt-in");
+policy.Enabled = true;
+Check(!policy.Allows(detectedGame), "Future games require explicit opt-in");
+policy.Approved.Add(GlobalPolicy.Key(detectedGame));
+Check(policy.Allows(detectedGame), "Approved existing game is eligible");
+policy.Excluded.Add("NVIDIA:42"); policy.FutureGames = true;
+Check(!policy.Allows(detectedGame), "Exclusion wins over approval and future-game option, case insensitive");
+policy.Excluded.Clear(); policy.Approved.Clear();
+Check(policy.Allows(detectedGame), "Future-game option allows newly detected game");
+detectedGame.Manual = true;
+Check(!policy.Allows(detectedGame), "Manual programs cannot be auto-applied as FG candidates");
+detectedGame.Manual = false; detectedGame.CanEnable = false;
+Check(!policy.Allows(detectedGame), "Recovery-only entries are never auto-applied");
+detectedGame.CanEnable = true; detectedGame.Exe = null;
+Check(!policy.Allows(detectedGame), "Ambiguous rendering executable requires user selection");
+detectedGame.Exe = "C:/fixture/game.exe"; policy.Enabled = false;
+Check(!policy.Allows(detectedGame), "Master switch stops all automatic installs");
+policy.Approved = null; policy.Excluded = null; policy.Normalize();
+Check(policy.Approved.Count == 0 && policy.Excluded.Count == 0, "Older persisted settings normalize safely");
+
+var globalGood = Fixture("global-off-good");
+var globalBad = Fixture("global-off-bad");
+string damagedBackup = Path.Combine(globalBad.Installer.Store, "version.backup");
+byte[] savedBackup = File.ReadAllBytes(damagedBackup);
+File.WriteAllText(damagedBackup, "damaged");
+var restorePolicy = new GlobalPolicy { ManagedFolders = new() { globalGood.Installer.Target, globalBad.Installer.Target } };
+int restoreSaves = 0;
+var globalRestore = GlobalApply.Restore(restorePolicy, () => restoreSaves++);
+Check(globalRestore.restored == 1 && globalRestore.failed.Count == 1 && restoreSaves == 1, "Global OFF restores healthy games and retains failed ownership");
+Check(Original(globalGood.Installer) && !Directory.Exists(globalGood.Installer.Store) && Directory.Exists(globalBad.Installer.Store), "Global OFF cleans completed recovery while preserving damaged backup journal");
+File.WriteAllBytes(damagedBackup, savedBackup);
+globalRestore = GlobalApply.Restore(restorePolicy, () => restoreSaves++);
+Check(globalRestore.failed.Count == 0 && restorePolicy.ManagedFolders.Count == 0 && Original(globalBad.Installer), "Failed global recovery can be retried after backup repair");
+
+if (args.Contains("--live"))
+{
+    Updates.DataRoot = Path.Combine(sandbox, "live-cache");
+    var live = Updates.FetchLatest(Payload.Baseline(), Console.WriteLine);
+    Check(live.Files.All(file => Disk.Hash(Updates.FileFor(live, file.Name)) == file.Hash), "Live upstream source ZIP and hashes");
+    string game = Path.Combine(sandbox, "live-game"); Directory.CreateDirectory(game);
+    File.WriteAllBytes(Path.Combine(game, "version.dll"), Pe(99));
+    var installer = new Installer(game); installer.Enable("version.dll", Updates.DirectoryFor(live));
+    installer.SaveIniSettings(new RuntimeIniSettings { Optimized = 1, MaxGeneratedFrames = 3 });
+    Check(installer.Status() == "적용됨", "Install real runtime and save INI in isolated fixture");
+    installer.Restore(); Check(Original(installer) && !Directory.Exists(installer.Store), "Restore real runtime fixture cleanly");
+    Console.WriteLine("Verified upstream runtime " + live.Version);
+}
+Console.WriteLine($"{checks} checks passed. Fixtures: {sandbox}");

@@ -1,4 +1,4 @@
-param([string]$Version = '1.1.0', [switch]$BuildApplication)
+param([string]$Version = '1.3.0', [switch]$BuildApplication)
 $ErrorActionPreference = 'Stop'
 $installerRoot = $PSScriptRoot
 $projectRoot = Split-Path -Parent $installerRoot
@@ -22,6 +22,6 @@ if (Test-Path -LiteralPath $output) {
     Remove-Item -LiteralPath $output -Recurse -Force
 }
 
-& dotnet build (Join-Path $installerRoot 'MFG-Enabler-Installer.wixproj') -c Release -p:ProductVersion=$Version
+& dotnet build (Join-Path $installerRoot 'MFG-Enabler-Installer.wixproj') -c Release -t:Rebuild -p:ProductVersion=$Version
 if ($LASTEXITCODE -ne 0) { throw 'MSI build failed.' }
 Write-Host "Built MFG-Enabler-Installer\output\MFG-Enabler-Setup-$Version.msi"

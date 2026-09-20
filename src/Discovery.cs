@@ -17,6 +17,7 @@ namespace MfgEnabler {
    [DataMember] public bool Manual;
   // Eligibility is deliberately never loaded from our persisted games.json.
   public bool CanEnable;
+  public GraphicsApi Api;
   public string Evidence;
   public string StorageFile;
   public List<string> Executables = new List<string>();
@@ -33,7 +34,7 @@ namespace MfgEnabler {
  }
  // Independent reader of NVIDIA's installed-app output, not a launcher scanner.
  public static class Discovery {
-  public static string DefaultStorage { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"NVIDIA Corporation","NVIDIA App","NvBackend","ApplicationStorage.json"); } }
+  public static string DefaultStorage { get { return Environment.GetEnvironmentVariable("MFG_ENABLER_STORAGE_FILE") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"NVIDIA Corporation","NVIDIA App","NvBackend","ApplicationStorage.json"); } }
   public static string NvidiaAppPath { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),"NVIDIA Corporation","NVIDIA App","CEF","NVIDIA App.exe"); } }
   static Dictionary<string,object> Obj(object value) { return value as Dictionary<string,object>; }
   static object Field(Dictionary<string,object> obj,string name) { object value; return obj!=null && obj.TryGetValue(name,out value)?value:null; }
@@ -141,6 +142,7 @@ namespace MfgEnabler {
      Name=Str(app,"DisplayName")??Path.GetFileName(root), Root=root, Source="NVIDIA App · FG DLL 확인",
      NvidiaId=Id(Field(row,"LocalId")), StorageFile=storage, CanEnable=true,
      Exe=driver??(paths.Count==1?paths[0]:null), Executables=paths,
+     Api=driver!=null?GraphicsApiDetector.Detect(driver):(paths.Count==1?GraphicsApiDetector.Detect(paths[0]):GraphicsApi.Unknown),
      Evidence=(fpOk?"NVIDIA fingerprint 확인":"NVIDIA fingerprint 미확인 · DLSS 파일 기준으로 허용")+(profileOk?" · FG 차단 없음":" · FG 프로필 미확인 · DLSS 파일 기준으로 허용")+"\nFG 구성 파일: "+dlssg
     };
    }
@@ -178,6 +180,12 @@ namespace MfgEnabler {
     var fresh=Scan(game.StorageFile,null).Games.FirstOrDefault(g=>g.NvidiaId==game.NvidiaId && String.Equals(g.Root,game.Root,StringComparison.OrdinalIgnoreCase));
     if(fresh==null || !fresh.Executables.Contains(selectedExe,StringComparer.OrdinalIgnoreCase)) throw new IOException("NVIDIA 검색 결과 또는 게임 파일이 변경되었습니다. 목록을 새로고침하세요.");
    }
+   public static void ValidateFreshCandidate(Game game,string selectedExe) {
+    if(game==null || game.Manual || !game.CanEnable || String.IsNullOrEmpty(game.StorageFile)) throw new IOException("NVIDIA App에서 FG 구성을 확인한 게임만 새로 활성화할 수 있습니다.");
+    if(String.IsNullOrEmpty(selectedExe) || game.Executables==null || !game.Executables.Contains(selectedExe,StringComparer.OrdinalIgnoreCase)) throw new IOException("NVIDIA 검색 결과 또는 게임 파일이 변경되었습니다. 목록을 새로고침하세요.");
+    if(!File.Exists(selectedExe) || !IsX64(selectedExe)) throw new IOException("선택한 x64 게임 실행 파일을 찾을 수 없습니다.");
+    Disk.Safe(selectedExe);
+   }
    static void ValidateManual(Game game,string selectedExe) {
     string root=game.Root;
     if(String.IsNullOrWhiteSpace(root)||!Path.IsPathRooted(root)||!Directory.Exists(root)) throw new IOException("게임 설치 폴더가 유효하지 않습니다.");
@@ -193,7 +201,7 @@ namespace MfgEnabler {
    var list=detected.ToList();
    foreach(var old in saved.Where(g=>g!=null&&!String.IsNullOrEmpty(g.Exe))) {
     var current=list.FirstOrDefault(g=>String.Equals(g.Root,old.Root,StringComparison.OrdinalIgnoreCase));
-     if(current!=null && current.Executables.Contains(old.Exe,StringComparer.OrdinalIgnoreCase)) current.Exe=old.Exe;
+     if(current!=null && current.Executables.Contains(old.Exe,StringComparer.OrdinalIgnoreCase)) { current.Exe=old.Exe; current.Api=GraphicsApiDetector.Detect(old.Exe); }
      if(old.Manual && current==null) {
       try {
        string folder=Path.GetDirectoryName(Path.GetFullPath(old.Exe));

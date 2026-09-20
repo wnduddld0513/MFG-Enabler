@@ -44,6 +44,14 @@ try {
     $updateLock = [Threading.Mutex]::new($false, 'Local\MFG-Enabler-1')
     try { $lockHeld = $updateLock.WaitOne(10000) } catch [Threading.AbandonedMutexException] { $lockHeld = $true }
     if (!$lockHeld) { throw 'Another MFG-Enabler instance is running.' }
+    # Stop only the tray executable belonging to this installation before replacing it.
+    $trayExe = SafePath $targetRoot 'MFG-Enabler.Tray.exe'
+    $trays = @(Get-Process -Name 'MFG-Enabler.Tray' -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $trayExe })
+    if ($trays.Count -gt 0) {
+        $stopper = Start-Process -FilePath $trayExe -ArgumentList '--quit' -WindowStyle Hidden -PassThru
+        if (!$stopper.WaitForExit(10000)) { throw 'Tray shutdown command timed out.' }
+        foreach ($trayProcess in $trays) { if (!$trayProcess.WaitForExit(10000)) { throw 'Tray did not close. No files were replaced.' } }
+    }
     $canRestart = $true
     $backupRoot = Join-Path $jobRoot 'backup'
     $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
