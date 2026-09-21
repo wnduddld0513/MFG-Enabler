@@ -122,8 +122,6 @@ The global test's optional `--live-driver` argument writes and reads a uniquely 
 
 [sdli1995/dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_sm86) supplies the runtime, downloaded separately.
 
-[wnduddld0513](https://github.com/wnduddld0513) maintains MFG-Enabler.
-
 [NvAPIWrapper](https://github.com/falahati/NvAPIWrapper) by Soroush Falahati supplies NVIDIA API bindings under LGPLv3; its [license](docs/NvAPIWrapper-LICENSE.txt) is included with the application.
 
-MFG-Enabler is licensed under [GNU GPL version 3](LICENSE) (GPL-3.0-only). Copyright (c) 2026 MFG Enabler contributors. Third-party components retain their respective licenses; see [upstream notices](docs/UPSTREAM-NOTICES.txt).
+MFG-Enabler is licensed under [GNU GPL version 3](LICENSE) (GPLv3). Third-party components retain their respective licenses; see [upstream notices](docs/UPSTREAM-NOTICES.txt).
