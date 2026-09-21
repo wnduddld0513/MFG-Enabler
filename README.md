@@ -1,7 +1,7 @@
 # MFG-Enabler
 
 <img width="1940" height="1354" alt="program" src="https://github.com/user-attachments/assets/fd5b9764-4b58-4d71-9d25-a379e89c1669" />
-<img width="1934" height="1354" alt="global" src="https://github.com/user-attachments/assets/80d200b0-8c86-4486-bafc-de185f52bb5e" />
+<img width="1940" height="1354" alt="mfg_all_game" src="https://github.com/user-attachments/assets/c6240b9c-ce34-4afb-a616-d4e7bce885a0" />
 
 
 MFG-Enabler is a Windows tool for enabling Multi Frame Generation (MFG) on GeForce RTX 20, 30, and 40 series GPUs in supported games.
