@@ -52,13 +52,17 @@ internal static class AppUpdates
         AppRelease best = null;
         foreach (var release in doc.RootElement.EnumerateArray())
         {
-            if (release.GetProperty("draft").GetBoolean() || release.GetProperty("target_commitish").GetString() != channel) continue;
+            if (release.GetProperty("draft").GetBoolean()) continue;
             string tag = release.GetProperty("tag_name").GetString()?.TrimStart('v');
             var number = ReleaseNumber.Parse(tag);
-            if (number == null || (number.Beta != null) != (channel == "beta")) continue;
-            if (channel == "main" && release.GetProperty("prerelease").GetBoolean()) continue;
-            bool switchingChannel = (installed.Beta != null) != (channel == "beta");
-            if (switchingChannel ? number.Core.CompareTo(installed.Core) < 0 : number.CompareTo(installed) <= 0) continue;
+            if (number == null) continue;
+            string branch = release.GetProperty("target_commitish").GetString();
+            bool stable = number.Beta == null && branch == "main" && !release.GetProperty("prerelease").GetBoolean();
+            bool beta = number.Beta != null && branch == "beta" && release.GetProperty("prerelease").GetBoolean();
+            if (!stable && !(channel == "beta" && beta)) continue;
+            // Both channels share stable releases. Never offer the installed stable
+            // version again or downgrade it to an earlier beta of the same version.
+            if (number.CompareTo(installed) <= 0) continue;
             string expected = "MFG-Enabler-Package-" + tag + ".zip";
             var assets = release.GetProperty("assets").EnumerateArray().Where(a => a.GetProperty("name").GetString() == expected && a.GetProperty("state").GetString() == "uploaded").ToArray();
             if (assets.Length != 1) continue;

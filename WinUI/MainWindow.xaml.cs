@@ -588,7 +588,8 @@ public sealed partial class MainWindow : Window
         {
             var dialog = new ContentDialog { XamlRoot = Root.XamlRoot, RequestedTheme = ElementTheme.Dark, Title = title,
                 CloseButtonText = L("Close", "닫기"), Content = new ScrollViewer { MaxHeight = 420,
-                Content = new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true } } };
+                HorizontalScrollMode = ScrollMode.Disabled, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Content = new TextBlock { Text = text, Margin = new Thickness(0, 0, 20, 0), TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true } } };
             await dialog.ShowAsync();
         }
         finally { dialogOpen = false; ResumeStorageScan(); }
@@ -604,11 +605,12 @@ public sealed partial class MainWindow : Window
         {
             XamlRoot = Root.XamlRoot,
             RequestedTheme = ElementTheme.Dark,
-            Title = "What's new · " + version,
+            Title = L("What's new · ", "새 기능 · ") + version,
             CloseButtonText = "OK",
             Content = new TextBlock
             {
-                Text = "• DX12-only automatic MFG installation by default; Vulkan is opt-in\n• Automatic discovery of new games and a lightweight native tray\n• Separate global / per-game NVIDIA DLSS and MFG controls\n• Verified DLL recovery, runtime INI settings, and English release notes",
+                Text = L("• MFG override: automatic runtime DLL installation for detected DX12 frame-generation games\n• Automatic DLL selection: finds the best-matching DLL for each game and uses it to apply MFG\n• NVIDIA Profile Inspector-style FG controls: global / per-game presets, fixed / dynamic multipliers and target FPS, completed in 1.4\n• Background tray: checks new games when NVIDIA App updates its library\n• Compact controls and corrected dialog scrollbar spacing",
+                    "• MFG 오버라이드: 감지된 DX12 프레임 생성 게임에 런타임 DLL 자동 설치\n• 게임에 맞는 DLL 자동 선택: 가장 적절한 DLL 파일을 자동으로 찾아 MFG 적용에 사용\n• NVIDIA 인스펙터 방식 FG 설정: 전역·게임별 프리셋, 고정·동적 배수, 목표 FPS 설정을 1.4에서 완성\n• 백그라운드 트레이: NVIDIA App 목록 갱신 시 새 게임 확인\n• 버튼 크기 정리 및 설정창 스크롤바 겹침 수정"),
                 TextWrapping = TextWrapping.Wrap
             }
         };

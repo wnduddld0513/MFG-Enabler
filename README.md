@@ -6,18 +6,19 @@
 
 MFG-Enabler is a Windows tool for enabling Multi Frame Generation (MFG) on GeForce RTX 20, 30, and 40 series GPUs in supported games.
 
-MFG-Enabler 1.3 manages the sdli1995/dlssg_for_sm86 runtime in supported Windows games, with separate NVIDIA driver profile controls. The 1.3 release was tested with upstream runtime 0.3.5.
+MFG-Enabler 1.4 manages the sdli1995/dlssg_for_sm86 runtime in supported Windows games, with separate NVIDIA driver profile controls.
 
-## Changes in 1.3
+## Changes in 1.4
 
 - Global automatic MFG installation for detected frame-generation games, including newly discovered games. **DX12 only by default; Vulkan is unchecked.** Exclusions and future-game consent are configured before enabling.
 - Native C tray companion monitors NVIDIA App library changes using Windows directory notifications. The WinUI interface exits when minimized/closed with tray mode enabled; a background worker runs only when needed.
-- Independent global and per-program NVIDIA DLSS FG/SR/RR presets, fixed/dynamic MFG settings, target FPS, and Smooth Motion controls. Per-program defaults inherit global driver settings.
+- Automatic DLL selection finds the best-matching DLL for each game and uses it to apply MFG, checks existing-file conflicts, and refreshes the selection when the rendering executable changes.
+- NVIDIA Profile Inspector-style FG settings, introduced in 1.3 and completed in 1.4: independent global/per-game presets, fixed/dynamic multipliers, and target FPS. Separate DLSS SR/RR presets are also available. Smooth Motion controls have been removed.
 - Turning automatic MFG off stops startup/tray behavior and restores the games it manages. Interrupted or failed recovery retains the original backups for a retry.
 - Correct preset enable flags, cleared stale dynamic settings, serialized UI/background writes, queued library changes, and fewer repeated payload downloads/scans.
-- Updated 1.3 version display, English runtime release notes, collapsible settings, matched button indicators, and a version-specific What's new dialog.
+- Compact controls, corrected dialog scrollbar spacing, and a concise English/Korean What's new dialog. The options dialog includes a small measured idle-tray resource note.
 
-See [the 1.3 release notes](docs/RELEASE-NOTES-1.3.md) and [validation results](docs/VALIDATION-1.3.md).
+See [the 1.4 release notes](docs/RELEASE-NOTES-1.4.md) and [validation results](docs/VALIDATION-1.4.md).
 
 ## Runtime installation and recovery
 
@@ -95,12 +96,12 @@ Install Visual Studio 2026 with the .NET 10 SDK and WinUI development components
 This publishes the app and required runtimes to `dist`. For a versioned stable ZIP:
 
 ```powershell
-.\build-release.ps1 -Version 1.3
+.\build-release.ps1 -Version 1.4
 ```
 
-Output: `releases/MFG-Enabler-Package-1.3.zip`. Extract the entire ZIP before starting `MFG-Enabler.exe`. Published downloads are available from [GitHub Releases](https://github.com/wnduddld0513/MFG-Enabler/releases); automatic Source code archives of MFG-Enabler itself are not runnable app packages.
+Output: `releases/MFG-Enabler-Package-1.4.zip`. Extract the entire ZIP before starting `MFG-Enabler.exe`. Published downloads are available from [GitHub Releases](https://github.com/wnduddld0513/MFG-Enabler/releases); automatic Source code archives of MFG-Enabler itself are not runnable app packages.
 
-Build the MSI after `build.ps1` with `MFG-Enabler-Installer/build.ps1 -Version 1.3.0`. The native tray build uses the SHA-256-verified bundled Zig 0.15.2 compiler; see [tray build and behavior](MFG-Enabler-Tray/README.md). Keep `MFG-Enabler.Tray.exe` and `NvAPIWrapper.dll` beside the application.
+Build the MSI after `build.ps1` with `MFG-Enabler-Installer/build.ps1 -Version 1.4.0`. The native tray build uses the SHA-256-verified bundled Zig 0.15.2 compiler; see [tray build and behavior](MFG-Enabler-Tray/README.md). Keep `MFG-Enabler.Tray.exe` and `NvAPIWrapper.dll` beside the application.
 
 Run recovery and update tests:
 
@@ -120,7 +121,7 @@ The global test's optional `--live-driver` argument writes and reads a uniquely 
 
 [sdli1995/dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_sm86) supplies the runtime, downloaded separately.
 
-[wnduddld0513](https://github.com/wnduddld0513) maintains MFG-Enabler. [**OpenAI Codex (@codex)**](https://github.com/codex) contributed implementation, debugging, regression tests, documentation, and release preparation for 1.3; see [contributors](CONTRIBUTORS.md).
+[wnduddld0513](https://github.com/wnduddld0513) maintains MFG-Enabler.
 
 [NvAPIWrapper](https://github.com/falahati/NvAPIWrapper) by Soroush Falahati supplies NVIDIA API bindings under LGPLv3; its [license](docs/NvAPIWrapper-LICENSE.txt) is included with the application.
 

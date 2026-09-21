@@ -22,10 +22,6 @@ foreach ($file in @('MFG-Enabler.exe','MFG-Enabler.Tray.exe','MFG-Enabler.deps.j
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LICENSE') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs/UPSTREAM-NOTICES.txt') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs/NvAPIWrapper-LICENSE.txt') -Destination $stage
-$contributors = Join-Path $PSScriptRoot 'CONTRIBUTORS.md'
-if (Test-Path -LiteralPath $contributors -PathType Leaf) {
-    Copy-Item -LiteralPath $contributors -Destination $stage
-}
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 [IO.Compression.ZipFile]::CreateFromDirectory($stage, $zip)
 $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()

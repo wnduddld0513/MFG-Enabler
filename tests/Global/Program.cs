@@ -108,6 +108,13 @@ Check(detects == 1 && recommendation.Proxy == "dbghelp.dll", "Proxy recommendati
 int recordCount = File.ReadLines(recommendationFile).Count(x => !String.IsNullOrWhiteSpace(x) && !x.StartsWith("#"));
 ProxyRecommendations.DetectAndStore(recommendationGame, true, null, recommendationFile, Stub);
 Check(detects == 2 && File.ReadLines(recommendationFile).Count(x => !String.IsNullOrWhiteSpace(x) && !x.StartsWith("#")) == recordCount, "Forced proxy scan overwrites the existing game record");
+string originalRecommendationExe = recommendationGame.Exe;
+recommendationGame.Exe = Path.Combine(recommendationGame.Root, "other-renderer.exe");
+File.WriteAllBytes(recommendationGame.Exe, Executable("d3d12.dll", "winmm.dll"));
+Check(ProxyRecommendations.Get(recommendationGame, recommendationFile) == null, "Changed rendering executable hides stale proxy recommendation");
+ProxyRecommendations.DetectAndStore(recommendationGame, false, null, recommendationFile, Stub);
+Check(detects == 3 && ProxyRecommendations.Get(recommendationGame, recommendationFile).Exe == recommendationGame.Exe, "Changed rendering executable refreshes automatic recommendation");
+recommendationGame.Exe = originalRecommendationExe;
 string noneFile = Path.Combine(root, "recommendations-none.txt");
 int noneDetects = 0;
 ProxyDetectionResult NoneStub(string exe, string owned) { noneDetects++; return new ProxyDetectionResult { Selected = null, Ambiguous = Array.Empty<string>(), Candidates = Array.Empty<ProxyCandidate>() }; }

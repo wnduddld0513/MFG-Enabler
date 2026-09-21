@@ -112,16 +112,8 @@ public static class GraphicsApiDetector
         return false;
     }
 
-    static bool Contains(byte[] buffer, int length, byte[] pattern)
-    {
-        for (int i = 0; i <= length - pattern.Length; i++)
-        {
-            int j = 0;
-            while (j < pattern.Length && buffer[i + j] == pattern[j]) j++;
-            if (j == pattern.Length) return true;
-        }
-        return false;
-    }
+    static bool Contains(byte[] buffer, int length, byte[] pattern) =>
+        buffer.AsSpan(0, length).IndexOf(pattern) >= 0;
 }
 
 public sealed class ProxyEvidence

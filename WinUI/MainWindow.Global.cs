@@ -114,13 +114,14 @@ public sealed partial class MainWindow
     {
         if (busy || dialogOpen) { ApplyGlobalLanguage(); return; }
         var old = settings.Global;
-        var body = new StackPanel { Spacing = 14 };
+        var body = new StackPanel { Spacing = 14, Margin = new Thickness(0, 0, 20, 0) };
         body.Children.Add(new TextBlock { Text = L("Online games may block modified DLLs or penalize your account through anti-cheat. Online status cannot be reliably detected. Select games to EXCLUDE below before enabling. Future games can also include online games.", "온라인 게임에서는 DLL 변경으로 안티치트 차단이나 계정 제재가 발생할 수 있습니다. 온라인 게임 여부를 확실하게 자동 판별할 수 없습니다. 아래에서 적용하지 않을 게임을 체크하세요. 앞으로 추가되는 게임에도 온라인 게임이 포함될 수 있습니다."), TextWrapping = TextWrapping.Wrap });
         var future = new CheckBox { Content = L("Automatically apply to future detected games", "앞으로 발견되는 게임에도 자동 적용"), IsChecked = enable && (!old.Enabled || old.FutureGames) };
         var startup = new CheckBox { Content = L("Start with Windows (only while override is enabled)", "Windows 로그인 시 실행 (오버라이드 사용 중에만)"), IsChecked = enable && (!old.Enabled || old.Startup) };
         var tray = new CheckBox { Content = L("Keep running in tray; start in tray at login", "닫기·최소화 시 트레이에서 실행 / 로그인 시 트레이로 시작"), IsChecked = enable && (!old.Enabled || old.Tray) };
         var vulkan = new CheckBox { Content = L("Include Vulkan / mixed-API games (experimental; runtime compatibility is not guaranteed)", "Vulkan·혼합 API 게임 포함 (실험적 · 런타임 호환 보장 없음)"), IsChecked = old.AllowVulkan, IsEnabled = enable };
         body.Children.Add(new TextBlock { Text = L("DX12 is enabled by default. Unknown APIs are never installed automatically.", "DX12는 기본 적용됩니다. API 확인 불가 게임은 자동 설치하지 않습니다."), TextWrapping = TextWrapping.Wrap });
+        body.Children.Add(new TextBlock { Text = L("(Idle tray, 30-second local measurement: CPU 0.00%, RAM about 10–15 MiB. Usage varies by system and rises during scans / installation.)", "(트레이 대기 30초 실측: CPU 0.00%, RAM 약 10~15MiB · 환경에 따라 다르며 검색·설치 중에는 증가할 수 있습니다.)"), FontSize = 12, Opacity = 0.7, TextWrapping = TextWrapping.Wrap });
         body.Children.Add(vulkan);
         future.IsEnabled = startup.IsEnabled = tray.IsEnabled = enable;
         body.Children.Add(future); body.Children.Add(startup); body.Children.Add(tray);
@@ -134,7 +135,7 @@ public sealed partial class MainWindow
         }
         if (boxes.Count == 0) body.Children.Add(new TextBlock { Text = L("No detected games yet.", "현재 감지된 게임이 없습니다.") });
         var dialog = new ContentDialog { XamlRoot = Root.XamlRoot, RequestedTheme = ElementTheme.Dark,
-            Title = L("MFG override options", "MFG 오버라이드 설정"), Content = new ScrollViewer { MaxHeight = 440, Content = body },
+            Title = L("MFG override options", "MFG 오버라이드 설정"), Content = new ScrollViewer { MaxHeight = 440, HorizontalScrollMode = ScrollMode.Disabled, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Content = body },
             PrimaryButtonText = enable ? L("Accept and enable", "위험 확인 후 활성화") : L("Save", "저장"), CloseButtonText = L("Cancel", "취소"), DefaultButton = ContentDialogButton.Close };
         dialogOpen = true;
         ContentDialogResult result;

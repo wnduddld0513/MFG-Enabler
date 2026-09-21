@@ -75,7 +75,7 @@ public sealed partial class MainWindow
             {
                 XamlRoot = Root.XamlRoot, RequestedTheme = ElementTheme.Dark,
                 Title = L("New update available", "새 업데이트가 있습니다"),
-                Content = "MFG-Enabler " + release.Version + " · " + (release.Channel == "beta" ? "Beta" : "Stable") + "\n\n" + L("Download and apply the update to this application folder, then restart.", "현재 앱 폴더에 업데이트를 다운로드하고 적용한 뒤 재시작합니다."),
+                Content = "MFG-Enabler " + release.Version + " · " + (ReleaseNumber.Parse(release.Version)?.Beta != null ? "Beta" : "Stable") + "\n\n" + L("Download and apply the update to this application folder, then restart.", "현재 앱 폴더에 업데이트를 다운로드하고 적용한 뒤 재시작합니다."),
                 PrimaryButtonText = L("Update", "업데이트"),
                 SecondaryButtonText = L("Don't show again", "다시 표시하지 않기"),
                 CloseButtonText = L("Later", "나중에"), DefaultButton = ContentDialogButton.Close

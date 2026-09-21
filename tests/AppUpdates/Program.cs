@@ -31,10 +31,15 @@ object Release(string version, string branch, bool prerelease = false, string as
 };
 string releases = JsonSerializer.Serialize(new[] { Release("1.1", "main"), Release("1.2b2", "beta", true), Release("1.2b10", "beta", true), Release("9.0b1", "main", true), Release("9.0", "beta") });
 Check(AppUpdates.SelectRelease(releases, "main", "1.0")?.Version == "1.1", "Stable excludes Beta and wrong branches");
-Check(AppUpdates.SelectRelease(releases, "beta", "1.0b1")?.Version == "1.2b10", "Beta excludes Stable; numeric beta ordering");
+Check(AppUpdates.SelectRelease(releases, "beta", "1.0b1")?.Version == "1.2b10", "Beta picks newest eligible release with numeric beta ordering");
 Check(AppUpdates.SelectRelease(releases, "main", "1.1") == null, "No repeat for installed version");
 Check(AppUpdates.SelectRelease(releases, "beta", "2.0b1") == null, "No older base version");
-Check(AppUpdates.SelectRelease(JsonSerializer.Serialize(new[] { Release("1.0b1", "beta", true) }), "beta", "1.0") != null, "Explicit Stable to Beta switch permits same base");
+Check(AppUpdates.SelectRelease(JsonSerializer.Serialize(new[] { Release("1.0b1", "beta", true) }), "beta", "1.0") == null, "Stable on Beta channel does not downgrade to an older beta");
+string graduation = JsonSerializer.Serialize(new[] { Release("1.4b2", "beta", true), Release("1.4", "main") });
+Check(AppUpdates.SelectRelease(graduation, "beta", "1.4b2")?.Version == "1.4", "Beta users receive the final stable release");
+Check(AppUpdates.SelectRelease(graduation, "beta", "1.4") == null, "Shared stable release is not repeatedly offered on Beta");
+Check(AppUpdates.SelectRelease(JsonSerializer.Serialize(new[] { Release("1.4", "main"), Release("1.5b1", "beta", true) }), "beta", "1.4")?.Version == "1.5b1", "Beta users continue to receive the next beta series");
+Check(AppUpdates.SelectRelease(JsonSerializer.Serialize(new[] { Release("1.5", "main", true) }), "beta", "1.4") == null, "Reject prerelease mislabeled as stable");
 Check(AppUpdates.SelectRelease(JsonSerializer.Serialize(new[] { Release("1.0", "main") }), "main", "1.0b3") != null, "Explicit Beta to Stable switch");
 Check(AppUpdates.SelectRelease(JsonSerializer.Serialize(new[] { Release("1.1", "main", assetName: "installer.msi") }), "main", "1.0") == null, "MSI is ignored");
 Check(AppUpdates.SelectRelease(JsonSerializer.Serialize(new[] { Release("1.1", "main", digest: "invalid") }), "main", "1.0") == null, "Unverifiable asset is ignored");

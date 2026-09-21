@@ -23,10 +23,12 @@ with the GitHub releases API; selecting an existing tag may retain an earlier ta
 GitHub must finish uploading and report a `sha256:` digest for the ZIP.
 MSI and automatic Source code archives are ignored by the in-app updater.
 
-In the application, select **Beta** and click **Check for updates** to receive Beta
-releases. Stable only offers Stable releases. Switching from 1.0 Stable to 1.0b1
-Beta is supported. An already installed 1.0b1 does not update to another 1.0b1;
-publish 1.0b2 for the next Beta. Manual checks also show a previously dismissed version.
+From 1.4 onward, **Beta** receives both beta and stable releases, choosing the newest
+version; **Stable** only receives stable releases. A final 1.4 replaces 1.4b2 in both
+channels, and 1.4 on Beta can later receive 1.5b1 without reverting to 1.4b2.
+Versions through 1.4b2 only check beta releases while Beta is selected: switch once
+to Stable or install the shared 1.4 ZIP manually to adopt the new behavior.
+Manual checks also show a previously dismissed version.
 
 The updater verifies the downloaded SHA-256, runtime files, and embedded version
 before applying changes. It backs up replaced files and rolls back on failure.

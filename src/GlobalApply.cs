@@ -55,8 +55,13 @@ public static class ProxyRecommendations
     {
         if (game == null) return null;
         file ??= AppPaths.ProxyRecommendationsFile;
-        return Read(file).GetValueOrDefault(GlobalPolicy.Key(game));
+        var record = Read(file).GetValueOrDefault(GlobalPolicy.Key(game));
+        return MatchesExecutable(record, game) ? record : null;
     }
+
+    static bool MatchesExecutable(ProxyRecommendationRecord record, Game game) =>
+        record != null && !String.IsNullOrWhiteSpace(game.Exe) &&
+        String.Equals(record.Exe, Path.GetFullPath(game.Exe), StringComparison.OrdinalIgnoreCase);
 
     public static ProxyRecommendationRecord DetectAndStore(Game game, bool force = false, string ownedProxy = null,
         string file = null, Func<string, string, ProxyDetectionResult> detector = null)
@@ -65,7 +70,7 @@ public static class ProxyRecommendations
         file ??= AppPaths.ProxyRecommendationsFile;
         var records = Read(file);
         string key = GlobalPolicy.Key(game);
-        if (!force && records.TryGetValue(key, out var cached)) return cached;
+        if (!force && records.TryGetValue(key, out var cached) && MatchesExecutable(cached, game)) return cached;
 
         detector ??= (exe, owned) => ProxyDetector.Detect(exe, owned);
         ProxyDetectionResult detected = detector(game.Exe, ownedProxy);
